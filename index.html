@@ -1,0 +1,3105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CamPlay Arcade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Archivo+Black&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --zap:#2D6BFF;--burst:#FF2D78;--slime:#AAFF00;--beam:#FFE600;--void:#7B2FFF;
+  --bg-base:#0A0A1A;--bg-panel:#12122A;--bg-card:#1A1A35;
+  --p1:#2D6BFF;--p1l:#6B9FFF;--p2:#FF2D78;--p2l:#FF80AA;
+  --txt:#fff;--txt2:#9999CC;--txt3:#555588;
+  --grad-holo:linear-gradient(135deg,#FF2D78,#7B2FFF,#2D6BFF);
+  --font-arc:'Press Start 2P',monospace;--font-disp:'Archivo Black',sans-serif;--font-body:'DM Sans',sans-serif;
+  --rad:12px;--rad-pill:999px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-base);color:var(--txt);font-family:var(--font-body);-webkit-font-smoothing:antialiased}
+#app{width:100vw;height:100vh;position:relative;overflow:hidden}
+
+/* SCREENS */
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.screen.active{opacity:1;pointer-events:all}
+.screen::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,.015) 3px,rgba(255,255,255,.015) 4px);pointer-events:none;z-index:100}
+
+/* LOBBY */
+#lobby{background:radial-gradient(ellipse at 72% 88%, rgba(120,40,255,.2) 0%, transparent 52%), #0D0F1C;gap:0}
+.lobby-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.lobby-logo{text-align:center;position:relative;z-index:2;padding:44px 32px 22px}
+.logo-main{font-family:var(--font-arc);font-size:clamp(36px,7vw,76px);color:#fff;text-shadow:-5px 0 0 #00CFFF,5px 0 0 #FF2D78,0 5px 0 #FFE600;letter-spacing:.08em;line-height:1.1;background:none;-webkit-background-clip:initial;-webkit-text-fill-color:initial;background-clip:initial;filter:none;animation:none}
+.logo-sub{display:inline-block;font-family:var(--font-arc);font-size:10px;color:#111;background:#FFE600;border-radius:100px;padding:9px 22px;margin-top:18px;letter-spacing:.12em;text-transform:uppercase}
+@keyframes logoPulse{}
+.arcade-stripe{display:none}
+.arcade-label{font-family:var(--font-arc);font-size:9px;color:rgba(255,255,255,.32);letter-spacing:.2em;text-align:center;margin-top:24px;position:relative;z-index:2}
+.arcade-footer{font-family:var(--font-arc);font-size:8px;color:rgba(255,255,255,.2);letter-spacing:.14em;text-align:center;margin-top:22px;position:relative;z-index:2}
+.lobby-corner{position:absolute;width:44px;height:44px;border-color:#C8A84B;border-style:solid;z-index:3;pointer-events:none}
+.lobby-corner.tl{top:16px;left:16px;border-width:3px 0 0 3px}
+.lobby-corner.tr{top:16px;right:16px;border-width:3px 3px 0 0}
+.lobby-corner.bl{bottom:16px;left:16px;border-width:0 0 3px 3px}
+.lobby-corner.br{bottom:16px;right:16px;border-width:0 3px 3px 0}
+
+/* GAME CARDS */
+.game-cards{display:flex;gap:24px;position:relative;z-index:2;flex-wrap:wrap;justify-content:center;margin-top:16px}
+.game-card{width:230px;border:3px solid rgba(0,0,0,.55);border-radius:20px;padding:52px 20px 36px;cursor:pointer;transition:transform .1s cubic-bezier(.34,1.56,.64,1),box-shadow .1s;position:relative;user-select:none;box-shadow:5px 5px 0 rgba(0,0,0,.5)}
+.game-card:nth-child(1){background:#FFB800}
+.game-card:nth-child(2){background:#FF2D78}
+.game-card:nth-child(3){background:#A8FF00}
+.game-card:hover{transform:translateY(-7px);box-shadow:5px 12px 0 rgba(0,0,0,.5)}
+.game-card:active{transform:translateY(-1px);box-shadow:5px 6px 0 rgba(0,0,0,.5)}
+.game-card-icon{font-size:60px;display:block;text-align:center;margin-bottom:12px;line-height:1}
+.game-card-title{font-family:var(--font-disp);font-size:20px;margin-bottom:8px;text-align:center;line-height:1.2}
+.game-card-desc{font-family:var(--font-body);font-size:12px;line-height:1.55;text-align:center}
+.game-card-players{display:none}
+.game-card-badge{position:absolute;font-family:var(--font-disp);font-size:11px;font-weight:700;padding:5px 14px;border-radius:100px}
+.game-card:nth-child(1) .game-card-badge{top:14px;left:50%;transform:translateX(-50%);background:#fff;color:#111;border:2px solid rgba(0,0,0,.15)}
+.game-card:nth-child(2) .game-card-badge{top:14px;right:14px;background:#FFE600;color:#111;border:2px solid rgba(0,0,0,.15)}
+.game-card:nth-child(3) .game-card-badge{top:14px;right:14px;background:#7B2FFF;color:#fff;border:2px solid rgba(0,0,0,.15)}
+.game-card-star{position:absolute;bottom:14px;left:16px;font-size:18px;line-height:1;pointer-events:none}
+.game-card:nth-child(1) .game-card-title,.game-card:nth-child(3) .game-card-title{color:#111}
+.game-card:nth-child(1) .game-card-desc,.game-card:nth-child(3) .game-card-desc{color:rgba(0,0,0,.7)}
+.game-card:nth-child(2) .game-card-title{color:#fff}
+.game-card:nth-child(2) .game-card-desc{color:rgba(255,255,255,.88)}
+.game-card:nth-child(1) .game-card-star,.game-card:nth-child(3) .game-card-star{color:rgba(0,0,0,.55)}
+.game-card:nth-child(2) .game-card-star{color:rgba(255,255,255,.6)}
+.pbadge{display:none}
+.cstar{display:none}
+.fstar{position:absolute;pointer-events:none;animation:floatStar linear infinite}
+@keyframes floatStar{0%{transform:translateY(0) rotate(0deg);opacity:.8}50%{opacity:1}100%{transform:translateY(-45px) rotate(180deg);opacity:0}}
+
+/* BUTTONS */
+.btn{font-family:var(--font-disp);font-size:15px;padding:13px 28px;border-radius:var(--rad);border:3px solid #000;cursor:pointer;transition:transform .08s cubic-bezier(.34,1.56,.64,1),box-shadow .08s;box-shadow:4px 4px 0 rgba(0,0,0,.8);text-transform:uppercase;letter-spacing:.05em;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 rgba(0,0,0,.8)}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 rgba(0,0,0,.8)}
+.btn-primary{background:var(--zap);color:#fff}
+.btn-secondary{background:var(--bg-card);color:var(--txt);border-color:var(--txt3)}
+.btn-sm{font-size:12px;padding:8px 16px;border-width:2px;box-shadow:2px 2px 0 rgba(0,0,0,.8)}
+.btn-sm:hover{box-shadow:4px 4px 0 rgba(0,0,0,.8)}
+
+/* CAM PERMISSION */
+#cam-permission{background:var(--bg-base);gap:24px;text-align:center}
+.cam-icon{font-size:72px;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.cam-title{font-family:var(--font-disp);font-size:26px}
+.cam-desc{font-size:15px;color:var(--txt2);max-width:380px;line-height:1.6}
+
+/* LOADING */
+#loading{background:var(--bg-base);gap:24px}
+.loading-text{font-family:var(--font-arc);font-size:12px;color:var(--txt2);animation:blink 1s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.bar-track{width:280px;height:10px;background:var(--bg-panel);border:2px solid var(--txt3);border-radius:var(--rad-pill);overflow:hidden}
+.bar-fill{height:100%;background:var(--grad-holo);border-radius:var(--rad-pill);width:0;transition:width .3s ease-out}
+
+/* READY SCREEN */
+#ready{background:#000}
+#ready-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:.88}
+.ready-back{position:absolute;top:16px;left:16px;z-index:11}
+.ready-panel{
+  position:relative;z-index:10;
+  display:flex;flex-direction:column;align-items:center;gap:20px;
+  padding:36px 44px;
+  background:rgba(10,10,26,.80);
+  border:2px solid rgba(255,255,255,.18);
+  border-radius:var(--rad);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  text-align:center;
+  max-width:460px;
+  animation:slideUp .28s ease-out both;
+}
+.ready-emoji{font-size:54px;line-height:1;margin-bottom:-4px}
+.ready-title{font-family:var(--font-disp);font-size:clamp(22px,3.8vw,38px);color:var(--txt);letter-spacing:.03em}
+.ready-hint{font-family:var(--font-body);font-size:15px;color:var(--txt2);line-height:1.7;max-width:340px}
+.ready-divider{width:100%;height:1px;background:rgba(255,255,255,.12)}
+.btn-start{background:var(--slime);color:#111;font-size:18px;padding:15px 44px;border-color:#000;letter-spacing:.06em}
+.btn-start:hover{background:#c8ff00;transform:translate(-2px,-4px);box-shadow:6px 8px 0 rgba(0,0,0,.8)}
+.btn-start:active{transform:translate(2px,2px);box-shadow:1px 1px 0 rgba(0,0,0,.8)}
+.ready-cam-note{font-family:var(--font-body);font-size:11px;color:var(--txt3);letter-spacing:.1em;text-transform:uppercase}
+
+/* COUNTDOWN */
+#cdown{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;background:rgba(10,10,26,.85);opacity:0;pointer-events:none;transition:opacity .1s}
+#cdown.active{opacity:1;pointer-events:all}
+.cnum{font-family:var(--font-arc);font-size:clamp(80px,18vw,150px);color:var(--beam);text-shadow:0 0 40px var(--beam),4px 4px 0 #000;animation:countPop .8s cubic-bezier(.34,1.56,.64,1) forwards}
+.cnum.go{background:var(--grad-holo);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 20px rgba(255,45,120,.8))}
+.cdown-hint{font-family:var(--font-disp);font-size:16px;color:rgba(255,255,255,.65);margin-top:20px;letter-spacing:.05em;text-align:center;max-width:400px}
+@keyframes countPop{0%{transform:scale(3);opacity:0}60%{opacity:1}100%{transform:scale(1);opacity:1}}
+
+/* GAME */
+#game{background:#000;justify-content:flex-start}
+.hud{width:100%;height:64px;background:rgba(10,10,26,.96);border-bottom:2px solid var(--txt3);display:flex;align-items:center;justify-content:space-between;padding:0 12px;flex-shrink:0;z-index:10;position:relative}
+.hud-player{display:flex;align-items:center;gap:8px;min-width:180px}
+.hud-player.p2{flex-direction:row-reverse}
+.hlabel{font-family:var(--font-disp);font-size:12px;padding:3px 10px;border-radius:var(--rad-pill);border:2px solid}
+.hlabel.p1{color:var(--p1);border-color:var(--p1);background:rgba(45,107,255,.12)}
+.hlabel.p2{color:var(--p2);border-color:var(--p2);background:rgba(255,45,120,.12)}
+.hscore{font-family:var(--font-disp);font-size:28px;color:var(--txt);min-width:50px;text-align:center;transition:transform .15s cubic-bezier(.34,1.56,.64,1),color .1s}
+.hscore.pop{transform:scale(1.4);color:var(--beam)}
+.hcenter{display:flex;flex-direction:column;align-items:center;gap:1px}
+.htimer{font-family:var(--font-disp);font-size:32px;color:var(--txt);min-width:70px;text-align:center;transition:color .3s}
+.htimer.warn{color:#FFE600;animation:tpulse 1s ease-in-out infinite}
+.htimer.danger{color:var(--burst);animation:tpulse .4s ease-in-out infinite}
+@keyframes tpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.hgname{font-family:var(--font-body);font-size:10px;color:var(--txt3);letter-spacing:.1em;text-transform:uppercase}
+
+/* Menu button inside HUD */
+#hud-menu-btn{
+  position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  font-family:var(--font-disp);font-size:11px;padding:5px 12px;
+  background:transparent;color:var(--txt3);border:1px solid var(--txt3);
+  border-radius:6px;cursor:pointer;text-transform:uppercase;letter-spacing:.05em;
+  transition:color .15s,border-color .15s;
+}
+#hud-menu-btn:hover{color:var(--txt);border-color:var(--txt)}
+
+/* Canvas fills remaining space below HUD */
+.canvas-area{
+  position:relative;
+  flex:1;
+  width:100%;
+  overflow:hidden;
+}
+#gc{
+  display:block;
+  width:100%;
+  height:100%;
+}
+.plabels{position:absolute;bottom:0;left:0;right:0;height:32px;display:flex;align-items:center;justify-content:space-between;padding:0 32px;background:rgba(10,10,26,.85);border-top:1px solid var(--txt3);pointer-events:none;z-index:5}
+.plabel{font-family:var(--font-disp);font-size:12px}
+.plabel.p1{color:var(--p1l)}.plabel.p2{color:var(--p2l)}
+
+/* RESULTS */
+#results{background:var(--bg-base);gap:16px}
+.res-title{font-family:var(--font-arc);font-size:clamp(9px,1.6vw,16px);color:var(--beam);letter-spacing:.1em}
+.winner-crown{font-size:52px;animation:crownIn .8s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes crownIn{0%{transform:translateY(-30px) scale(0);opacity:0}100%{transform:translateY(0) scale(1);opacity:1}}
+.winner-name{font-family:var(--font-arc);font-size:clamp(14px,3vw,36px);background:var(--grad-holo);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 20px rgba(255,45,120,.8));animation:winIn .6s cubic-bezier(.34,1.56,.64,1) both;text-align:center;line-height:1.5}
+@keyframes winIn{0%{transform:scale(.3);opacity:0}100%{transform:scale(1);opacity:1}}
+.tie-text{font-family:var(--font-arc);font-size:clamp(12px,2.5vw,26px);animation:tieBlink .5s step-end infinite;text-align:center}
+@keyframes tieBlink{0%,100%{color:var(--p1)}50%{color:var(--p2)}}
+.scoreboard{background:var(--bg-panel);border:3px solid var(--txt3);border-radius:var(--rad);padding:20px 32px;min-width:420px;animation:slideUp .4s .3s ease-out both}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+.srow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.srow:last-child{border-bottom:none}
+.slabel{font-family:var(--font-body);font-size:13px;color:var(--txt2)}
+.sval{font-family:var(--font-disp);font-size:17px}
+.sval.p1{color:var(--p1l)}.sval.p2{color:var(--p2l)}
+.mvp{background:var(--bg-card);border:2px solid var(--beam);border-radius:var(--rad);padding:14px 24px;text-align:center;animation:slideUp .4s .5s ease-out both}
+.mvp-t{font-family:var(--font-disp);font-size:10px;color:var(--beam);letter-spacing:.15em;text-transform:uppercase;margin-bottom:5px}
+.mvp-v{font-family:var(--font-disp);font-size:15px;color:var(--txt)}
+.res-actions{display:flex;gap:14px;animation:slideUp .4s .7s ease-out both}
+
+/* CONFETTI */
+.confetti{position:fixed;pointer-events:none;z-index:999;animation:cfall linear forwards}
+@keyframes cfall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:.3}}
+
+/* FLASH */
+#flash{position:fixed;inset:0;background:#fff;pointer-events:none;z-index:999;opacity:0;transition:opacity .05s}
+#flash.on{opacity:.6}
+
+/* DEV PANEL */
+#dev-panel{position:fixed;top:70px;right:0;width:260px;background:rgba(5,5,15,.97);border:2px solid #FFE600;border-right:none;border-radius:12px 0 0 12px;padding:14px;z-index:500;font-family:var(--font-body);font-size:13px;color:#fff;transform:translateX(100%);transition:transform .25s ease}
+#dev-panel.open{transform:translateX(0)}
+#dev-panel h3{font-family:var(--font-disp);font-size:12px;color:#FFE600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+#dev-panel h3 span{font-family:var(--font-body);font-size:10px;color:var(--txt3);text-transform:none;letter-spacing:0}
+.dev-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px}
+.dev-row label{color:var(--txt2);font-size:12px;flex-shrink:0}
+.dev-row input[type=range]{flex:1;accent-color:#FFE600}
+.dev-val{font-size:12px;color:#FFE600;min-width:34px;text-align:right}
+.dev-btn{width:100%;margin-bottom:8px;padding:8px;font-family:var(--font-disp);font-size:11px;border-radius:8px;border:2px solid;cursor:pointer;letter-spacing:.05em;text-transform:uppercase;transition:opacity .15s}
+.dev-btn:hover{opacity:.8}
+.dev-btn-red{background:#FF2D78;color:#fff;border-color:#FF2D78}
+.dev-btn-yellow{background:transparent;color:#FFE600;border-color:#FFE600}
+.dev-status{font-size:11px;color:var(--txt3);margin-top:10px;padding-top:8px;border-top:1px solid var(--txt3);line-height:1.8}
+.dev-status b{color:var(--txt2)}
+#dev-tab{position:fixed;top:70px;right:0;background:#FFE600;color:#000;font-family:var(--font-disp);font-size:10px;padding:6px 4px;writing-mode:vertical-rl;cursor:pointer;z-index:501;border-radius:6px 0 0 6px;letter-spacing:.1em;user-select:none}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="flash"></div>
+
+  <!-- LOADING -->
+  <div id="loading" class="screen active">
+    <div class="lobby-logo"><div class="logo-main">CAMPLAY</div></div>
+    <div class="bar-track"><div id="lbar" class="bar-fill"></div></div>
+    <div id="ltxt" class="loading-text">LOADING...</div>
+  </div>
+
+  <!-- CAM PERMISSION -->
+  <div id="cam-permission" class="screen">
+    <div class="cam-icon">📷</div>
+    <div class="cam-title">Camera Access Needed</div>
+    <div class="cam-desc">CamPlay uses your webcam to track body movement.<br>Nothing is recorded or stored.</div>
+    <button class="btn btn-primary" id="cam-btn">Enable Camera</button>
+  </div>
+
+  <!-- LOBBY -->
+  <div id="lobby" class="screen">
+    <div class="lobby-bg" id="lbg"></div>
+    <div class="lobby-corner tl"></div>
+    <div class="lobby-corner tr"></div>
+    <div class="lobby-corner bl"></div>
+    <div class="lobby-corner br"></div>
+    <div class="lobby-logo">
+      <div class="logo-main">CAMPLAY</div>
+      <div class="logo-sub">✦ WEBCAM PARTY ARCADE ✦</div>
+    </div>
+    <div class="arcade-label">— SELECT YOUR GAME —</div>
+    <div class="game-cards" id="gcards"></div>
+    <div class="arcade-footer">★ INSERT COIN ★ PRESS START ★ HAVE FUN ★</div>
+  </div>
+
+  <!-- READY SCREEN -->
+  <div id="ready" class="screen">
+    <canvas id="ready-canvas"></canvas>
+    <div class="ready-back">
+      <button class="btn btn-secondary btn-sm" onclick="_stopReadyPreview();flash();showScreen('lobby')">← BACK</button>
+    </div>
+    <div class="ready-panel">
+      <div id="ready-emoji" class="ready-emoji">🎮</div>
+      <div id="ready-title" class="ready-title">GAME TITLE</div>
+      <div class="ready-divider"></div>
+      <div id="ready-hint" class="ready-hint">Instructions go here.</div>
+      <button class="btn btn-start" id="ready-start-btn">▶ START GAME</button>
+      <div class="ready-cam-note">Camera preview — check your position</div>
+    </div>
+  </div>
+
+  <!-- COUNTDOWN -->
+  <div id="cdown">
+    <div id="cnum" class="cnum">3</div>
+    <div id="cdown-hint" class="cdown-hint"></div>
+  </div>
+
+  <!-- GAME -->
+  <div id="game" class="screen">
+    <div class="hud">
+      <div class="hud-player p1">
+        <span class="hlabel p1">P1</span>
+        <span class="hscore" id="hs0">0</span>
+      </div>
+      <div class="hcenter">
+        <div class="htimer" id="htimer">60</div>
+        <div class="hgname" id="hgname">—</div>
+      </div>
+      <div class="hud-player p2">
+        <span class="hscore" id="hs1">0</span>
+        <span class="hlabel p2">P2</span>
+      </div>
+      <!-- Always-visible menu button -->
+      <button id="hud-menu-btn" onclick="goToMenu()">☰ MENU</button>
+    </div>
+    <div class="canvas-area">
+      <canvas id="gc"></canvas>
+      <div class="plabels">
+        <span class="plabel p1">◀ PLAYER 1</span>
+        <span class="plabel p2">PLAYER 2 ▶</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results" class="screen"></div>
+</div>
+
+<!-- DEV PANEL -->
+<div id="dev-tab" onclick="toggleDev()">DEV</div>
+<div id="dev-panel">
+  <h3>DEV PANEL <span>` to toggle</span></h3>
+  <div class="dev-row">
+    <label>Duration</label>
+    <input type="range" id="dev-dur" min="10" max="120" step="5" value="60"
+      oninput="DEV.duration=+this.value;document.getElementById('dev-dur-val').textContent=this.value+'s'"/>
+    <span class="dev-val" id="dev-dur-val">60s</span>
+  </div>
+  <div class="dev-row">
+    <label>Spawn Rate</label>
+    <input type="range" id="dev-spawn" min="0.3" max="3.0" step="0.1" value="1.0"
+      oninput="DEV.spawnMult=+this.value;document.getElementById('dev-spawn-val').textContent=(+this.value).toFixed(1)+'x'"/>
+    <span class="dev-val" id="dev-spawn-val">1.0x</span>
+  </div>
+  <button class="dev-btn dev-btn-red" onclick="devEndMatch()">⏹ End Match Now</button>
+  <button class="dev-btn dev-btn-yellow" id="dev-track-btn" onclick="DEV.trackingViz=!DEV.trackingViz;this.textContent=DEV.trackingViz?'👁 Hide Tracking':'👁 Show Tracking'">👁 Show Tracking</button>
+  <button class="dev-btn dev-btn-yellow" onclick="goToMenu()">🏠 Menu</button>
+  <div class="dev-status" id="dev-status">Idle</div>
+</div>
+
+<script>
+'use strict';
+
+// ─── DEV CONFIG ───────────────────────────────────────────────────
+const DEV = { visible: false, trackingViz: false, debugOverlay: false, duration: 60, spawnMult: 1.0 };
+
+// Persistent tracking log — updated by PoseEngine, read by debug renderer
+const TRACK = {
+  modelState: 'not loaded',  // 'loading' | 'ready' | 'error: ...'
+  lastError: '',
+  inferenceCount: 0,
+  poseCount: 0,
+  framesSinceLastPose: 0,
+  rawPoses: [],              // last raw output from detector
+  videoState: 'no video',   // human-readable video.readyState
+};
+
+function toggleDev() {
+  DEV.visible = !DEV.visible;
+  document.getElementById('dev-panel').classList.toggle('open', DEV.visible);
+}
+function devEndMatch() {
+  if (S.loop) { S.loop.stop(); Audio.gameOver(); endGame(); }
+}
+document.addEventListener('keydown', e => {
+  if (e.key === '`') toggleDev();
+  if (e.key === 'd' || e.key === 'D') {
+    DEV.debugOverlay = !DEV.debugOverlay;
+    DEV.trackingViz  = DEV.debugOverlay; // sync tracking viz with debug mode
+    console.log('[CamPlay] Debug overlay:', DEV.debugOverlay ? 'ON' : 'OFF');
+  }
+  if (e.key === 'Escape' && S.screen === 'game') goToMenu();
+});
+setInterval(updateDevStatus, 500);
+function updateDevStatus() {
+  if (!DEV.visible) return;
+  const el = document.getElementById('dev-status');
+  if (!el) return;
+  const poseCount = (S.poses || []).filter(Boolean).length;
+  const g = S.game;
+  const b0 = g?._boxes?.[0], b1 = g?._boxes?.[1];
+  const fmtBox = b => b ? `${Math.round(b.w)}×${Math.round(b.h)} @ (${Math.round(b.x)},${Math.round(b.y)})` : 'none';
+  el.innerHTML =
+    `<b>Screen:</b> ${S.screen}<br>` +
+    `<b>Poses detected:</b> ${poseCount}<br>` +
+    `<b>P1 hitbox:</b> ${fmtBox(b0)}<br>` +
+    `<b>P2 hitbox:</b> ${fmtBox(b1)}<br>` +
+    `<b>Rocks active:</b> ${g?.rocks?.length ?? 0}<br>` +
+    `<b>Canvas:</b> ${document.getElementById('gc')?.width ?? '?'}×${document.getElementById('gc')?.height ?? '?'}`;
+}
+
+// ─── AUDIO ────────────────────────────────────────────────────────
+const Audio = (() => {
+  let ctx = null;
+  function ac() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  function tone({ freq=440, type='square', dur=0.1, gain=0.3, delay=0, slide=null }) {
+    try {
+      const a = ac(), osc = a.createOscillator(), g = a.createGain();
+      osc.connect(g); g.connect(a.destination);
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, a.currentTime + delay);
+      if (slide) osc.frequency.linearRampToValueAtTime(slide, a.currentTime + delay + dur);
+      g.gain.setValueAtTime(0, a.currentTime + delay);
+      g.gain.linearRampToValueAtTime(gain, a.currentTime + delay + .005);
+      g.gain.exponentialRampToValueAtTime(.001, a.currentTime + delay + dur);
+      osc.start(a.currentTime + delay);
+      osc.stop(a.currentTime + delay + dur + .05);
+    } catch(_) {}
+  }
+  function noise({ dur=0.1, gain=0.2, delay=0, lp=800 }) {
+    try {
+      const a = ac(), buf = a.createBuffer(1, Math.ceil(a.sampleRate * dur), a.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      const src = a.createBufferSource(); src.buffer = buf;
+      const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lp;
+      const gn = a.createGain();
+      src.connect(f); f.connect(gn); gn.connect(a.destination);
+      gn.gain.setValueAtTime(gain, a.currentTime + delay);
+      gn.gain.exponentialRampToValueAtTime(.001, a.currentTime + delay + dur);
+      src.start(a.currentTime + delay);
+      src.stop(a.currentTime + delay + dur + .05);
+    } catch(_) {}
+  }
+  return {
+    blip()       { tone({ freq:440, type:'square', dur:.06, gain:.12 }); },
+    select()     { [523,659,784].forEach((f,i) => tone({ freq:f, type:'square', dur:.1, gain:.2, delay:i*.07 })); },
+    countdown(n) { const f={3:523,2:587,1:659}[n]||440; tone({ freq:f, type:'square', dur:.25, gain:.35 }); noise({ dur:.05, gain:.12, lp:400 }); },
+    go()         { [523,659,784,1047].forEach((f,i) => tone({ freq:f, type:'square', dur:.18, gain:.3, delay:i*.07 })); },
+    bonk()       { tone({ freq:200, type:'sawtooth', dur:.08, gain:.4, slide:80 }); noise({ dur:.12, gain:.3, lp:600 }); },
+    tick()       { tone({ freq:880, type:'square', dur:.04, gain:.08 }); },
+    gameOver()   { [784,659,523,392].forEach((f,i) => tone({ freq:f, type:'square', dur:.2, gain:.28, delay:i*.18 })); },
+    winner()     { const m=[523,523,784,784,880,880,1047,0,880,0,784]; let t=0; m.forEach(f=>{ if(f>0) tone({freq:f,type:'square',dur:.12,gain:.28,delay:t}); t+=.14; }); },
+    goldHit()    { [880,1047,1319].forEach((f,i)=>tone({freq:f,type:'sine',dur:.18,gain:.28,delay:i*.07})); },
+    storm()      {
+      // Dramatic thunder rumble + high electric sting
+      noise({ dur:.55, gain:.45, lp:280, delay:0 });
+      tone({ freq:90, type:'sawtooth', dur:.35, gain:.38, delay:.05, slide:50 });
+      tone({ freq:600, type:'square', dur:.08, gain:.3, delay:.0 });
+      tone({ freq:900, type:'square', dur:.08, gain:.28, delay:.06 });
+      tone({ freq:1200, type:'square', dur:.1, gain:.25, delay:.12 });
+    },
+  };
+})();
+
+// ─── POSE ENGINE ──────────────────────────────────────────────────
+class PoseEngine {
+  constructor() {
+    this.video    = null;
+    this.detector = null;
+    this.poses    = [];
+    this.running  = false;
+    this.onPoses  = null;
+    this.ready    = false;
+    this.vw = 640; this.vh = 480;
+  }
+
+  async load(onProg) {
+    TRACK.modelState = 'loading tf.js...';
+    onProg(.05, 'Loading TensorFlow...');
+    await this._loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js');
+    console.log('[PoseEngine] TF.js loaded. Version:', typeof tf !== 'undefined' ? tf.version.tfjs : 'MISSING');
+
+    TRACK.modelState = 'loading pose-detection...';
+    onProg(.5, 'Loading pose model...');
+    await this._loadScript('https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js');
+    console.log('[PoseEngine] pose-detection lib loaded:', typeof poseDetection !== 'undefined' ? 'OK' : 'MISSING');
+
+    TRACK.modelState = 'initializing detector...';
+    onProg(.8, 'Initializing detector...');
+    await tf.ready();
+    console.log('[PoseEngine] tf.ready() complete. Backend:', tf.getBackend());
+
+    this.detector = await poseDetection.createDetector(
+      poseDetection.SupportedModels.MoveNet,
+      { modelType: poseDetection.movenet.modelType.MULTIPOSE_LIGHTNING, enableSmoothing: true, minPoseScore: 0.15 }
+    );
+    console.log('[PoseEngine] Detector created:', this.detector ? 'OK' : 'FAILED');
+
+    TRACK.modelState = 'ready';
+    onProg(1, 'Ready!');
+    this.ready = true;
+  }
+
+  async startCamera() {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+      audio: false,
+    });
+    const video = document.createElement('video');
+    video.srcObject   = stream;
+    video.playsInline = true;
+    video.muted       = true;
+    await new Promise(resolve => { video.onloadedmetadata = resolve; });
+    await video.play();
+    this.video = video;
+    this.vw    = video.videoWidth;
+    this.vh    = video.videoHeight;
+  }
+
+  start() {
+    if (this.running) return;
+    this.running = true;
+    this._loop();
+  }
+
+  stop() { this.running = false; }
+
+  async _loop() {
+    if (!this.running) return;
+    requestAnimationFrame(() => this._loop());
+
+    // Update video state for debug
+    TRACK.videoState = this.video
+      ? ['no data','meta ready','current data','future data','enough data'][this.video.readyState] ?? this.video.readyState
+      : 'no video element';
+
+    if (!this.detector || !this.video || this.video.readyState < 2) {
+      TRACK.framesSinceLastPose++;
+      return;
+    }
+
+    try {
+      // flipHorizontal removed: we mirror x explicitly in _poseToCircle and the
+      // skeleton renderer (canvas_x = canvasW - kp.x * sx) to match drawMirrored.
+      // Using flipHorizontal:true here AND flipping manually would double-flip.
+      const results = await this.detector.estimatePoses(this.video, {
+        maxPoses: 2, flipHorizontal: false,
+      });
+      TRACK.inferenceCount++;
+      TRACK.rawPoses = results;
+
+      if (results.length > 0) {
+        TRACK.poseCount = results.length;
+        TRACK.framesSinceLastPose = 0;
+      } else {
+        TRACK.framesSinceLastPose++;
+      }
+
+      // Sort by hip-center X: smallest X first → left person = index 0, right = index 1
+      results.sort((a, b) => this._hipX(a) - this._hipX(b));
+      this.poses = results;
+      this.onPoses?.(results);
+    } catch (err) {
+      TRACK.lastError = err.message || String(err);
+      TRACK.modelState = 'error: ' + TRACK.lastError;
+      console.error('[PoseEngine] estimatePoses error:', err);
+    }
+  }
+
+  _hipX(pose) {
+    const kps = pose.keypoints;
+    const lh = kps[11], rh = kps[12];
+    if (lh && rh) return (lh.x + rh.x) / 2;
+    return lh?.x ?? rh?.x ?? 0;
+  }
+
+  // Draw video mirrored onto canvas, scaled to fit
+  drawMirrored(ctx, canvas) {
+    if (!this.video || this.video.readyState < 2) return;
+    const W = canvas.width, H = canvas.height;
+    ctx.save();
+    ctx.translate(W, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(this.video, 0, 0, W, H);
+    ctx.restore();
+  }
+
+  _loadScript(src) {
+    return new Promise((resolve, reject) => {
+      if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+      const s = document.createElement('script');
+      s.src = src; s.onload = resolve; s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+}
+
+// ─── GAME LOOP ────────────────────────────────────────────────────
+class GameLoop {
+  constructor({ onUpdate, onRender, onTimeUp, duration = 60 }) {
+    this.onUpdate  = onUpdate;
+    this.onRender  = onRender;
+    this.onTimeUp  = onTimeUp;
+    this._dur      = duration * 1000;
+    this._running  = false;
+    this._last     = 0;
+    this._elapsed  = 0;
+    this.timeLeft  = duration;
+  }
+  start() {
+    this._running = true;
+    this._last    = performance.now();
+    requestAnimationFrame(t => this._tick(t));
+  }
+  stop() { this._running = false; }
+  _tick(now) {
+    if (!this._running) return;
+    requestAnimationFrame(t => this._tick(t));
+    const dt = Math.min((now - this._last) / 1000, 0.05); // seconds, capped at 50ms
+    this._last     = now;
+    this._elapsed += dt * 1000;
+    this.timeLeft  = Math.max(0, Math.ceil((this._dur - this._elapsed) / 1000));
+    this.onUpdate?.(dt);
+    this.onRender?.();
+    if (this._elapsed >= this._dur) {
+      this._running = false;
+      this.onTimeUp?.();
+    }
+  }
+}
+
+// ─── UTILS ────────────────────────────────────────────────────────
+function rnd(min, max) { return Math.random() * (max - min) + min; }
+function rndInt(min, max) { return Math.floor(rnd(min, max + 1)); }
+
+// ═══════════════════════════════════════════════════════════════════
+//  CHARACTER RENDERER
+// ═══════════════════════════════════════════════════════════════════
+
+// Draws a small round character at (x, y). The character IS the player —
+// their face is the controller. Hitbox radius should match charR.
+const CHAR_R    = 30;  // visual radius (~36% larger than before)
+const HITBOX_R  = 26;  // collision radius — tracks with character size
+
+function drawCharacter(ctx, x, y, baseColor, isHit) {
+  const r = CHAR_R;
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Drop shadow
+  ctx.shadowColor = 'rgba(0,0,0,0.55)';
+  ctx.shadowBlur  = 10;
+  ctx.shadowOffsetY = 4;
+
+  // Body
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.fillStyle = isHit ? '#FF2D78' : baseColor;
+  ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.strokeStyle = isHit ? '#fff' : 'rgba(0,0,0,0.8)';
+  ctx.lineWidth   = 2.5;
+  ctx.stroke();
+
+  // White eyes
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(-7, -5, 5, 6, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(7, -5, 5, 6, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Pupils — look slightly up (anticipating falling rocks)
+  ctx.fillStyle = '#111';
+  ctx.beginPath(); ctx.arc(-6, -7, 2.8, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(8, -7, 2.8, 0, Math.PI * 2); ctx.fill();
+
+  // Mouth — nervous grin
+  ctx.strokeStyle = '#111';
+  ctx.lineWidth   = 2;
+  ctx.beginPath();
+  ctx.arc(0, 5, 7, 0.15, Math.PI - 0.15);
+  ctx.stroke();
+
+  // Hit flash — white ring
+  if (isHit) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.lineWidth   = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, r + 4, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  LEAN DODGE
+// ═══════════════════════════════════════════════════════════════════
+
+// Rock types — mutually exclusive probability roll
+// goldProb / blueProb are per-half adjusted probabilities supplied by LeanDodge.
+// Defaults match the original 7 / 7 split when called without arguments.
+function makeRockType(goldProb = 0.07, blueProb = 0.07) {
+  const r = Math.random();
+  if (r < goldProb)             return 'gold';
+  if (r < goldProb + blueProb)  return 'blue';
+  return 'normal';
+}
+
+class Rock {
+  // xMin/xMax let callers constrain which half rocks spawn in (storm targeting)
+  constructor(W, H, difficulty, xMin = null, xMax = null, goldProb = 0.07, blueProb = 0.07) {
+    this.type  = makeRockType(goldProb, blueProb);
+    this.isGold = this.type === 'gold';
+    this.isBlue = this.type === 'blue';
+
+    this.r     = rnd(18, 40);
+    // ~13% slower than previous build — keep chaos, improve playability
+    this.speed = rnd(240, 460 + difficulty * 165);
+    this.vx    = rnd(-30, 30);
+    this.rot   = 0;
+    this.rotS  = rnd(-3.2, 3.2);
+    this.dead  = false;
+
+    const margin = this.r + 6;
+    this.x = rnd(xMin ?? margin, xMax ?? W - margin);
+    this.y = -this.r - 4;
+
+    // Build shape points per type
+    if (this.isGold) {
+      this.pts = [];
+      for (let i = 0; i < 16; i++) {
+        const angle  = (i / 16) * Math.PI * 2;
+        const radius = i % 2 === 0 ? this.r : this.r * 0.68;
+        this.pts.push([Math.cos(angle) * radius, Math.sin(angle) * radius]);
+      }
+    } else if (this.isBlue) {
+      // 6-pointed crystal / snowflake shape
+      this.pts = [];
+      for (let i = 0; i < 12; i++) {
+        const angle  = (i / 12) * Math.PI * 2;
+        const radius = i % 2 === 0 ? this.r : this.r * 0.52;
+        this.pts.push([Math.cos(angle) * radius, Math.sin(angle) * radius]);
+      }
+    } else {
+      const sides = rndInt(5, 8);
+      this.pts = [];
+      for (let i = 0; i < sides; i++) {
+        const angle  = (i / sides) * Math.PI * 2;
+        const jitter = rnd(0.78, 1.1);
+        this.pts.push([Math.cos(angle) * this.r * jitter, Math.sin(angle) * this.r * jitter]);
+      }
+      const palette = ['#8888aa','#9999bb','#7a7a9a','#aaaacc','#998899'];
+      this.color = palette[rndInt(0, palette.length - 1)];
+    }
+  }
+
+  update(dt) {
+    // Save previous position so sweepsThrough can check the full path this frame
+    this.px = this.x;
+    this.py = this.y;
+    this.y   += this.speed * dt;
+    this.x   += this.vx * dt;
+    this.rot += this.rotS * dt;
+  }
+
+  isOffscreen(H) { return this.y > H + this.r; }
+
+  // Per-type collision radius.
+  // Blue crystals have prominent spike tips at full this.r; using 0.75 left
+  // the outer 25% of each spike with no hitbox — visually touching, no effect.
+  // Gold stars and normal polygons are more circular so 0.75–0.78 is fine.
+  get collisionR() {
+    if (this.isBlue) return this.r * 0.92; // spikes reach full r
+    if (this.isGold) return this.r * 0.78; // star tips reach full r
+    return this.r * 0.75;                  // normal blobs are roughly circular
+  }
+
+  // Swept-sphere continuous collision detection.
+  // Tests whether the rock's path segment (prev→current position) this frame
+  // intersects the player's hitbox circle — catches high-speed tunneling.
+  // All rock types (normal, gold, blue, storm) use this single path.
+  sweepsThrough(cx, cy, cr) {
+    const hitR = this.collisionR + cr; // combined collision radius
+
+    // Direction vector of rock's travel this frame
+    const dx = this.x  - this.px;
+    const dy = this.y  - this.py;
+    // Vector from path start to circle center
+    const fx = this.px - cx;
+    const fy = this.py - cy;
+
+    // If the start position is already inside — definite hit
+    if (fx * fx + fy * fy < hitR * hitR) return true;
+
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq < 0.001) {
+      // Rock barely moved; fall back to endpoint check
+      const ex = this.x - cx, ey = this.y - cy;
+      return ex * ex + ey * ey < hitR * hitR;
+    }
+
+    // Quadratic coefficients for line-segment vs circle
+    const b = 2 * (fx * dx + fy * dy);
+    const c = fx * fx + fy * fy - hitR * hitR;
+    let disc = b * b - 4 * lenSq * c;
+    if (disc < 0) return false; // ray misses circle entirely
+    disc = Math.sqrt(disc);
+    const t1 = (-b - disc) / (2 * lenSq);
+    const t2 = (-b + disc) / (2 * lenSq);
+    // Intersection is valid if it occurs within [0,1] of the segment
+    return (t1 >= 0 && t1 <= 1) || (t2 >= 0 && t2 <= 1) || (t1 < 0 && t2 > 1);
+  }
+
+  draw(ctx, H) {
+    const shadowColor = this.isGold ? 'rgba(255,180,0,0.4)' : this.isBlue ? 'rgba(0,180,255,0.35)' : '#000';
+    const dist   = Math.max(0, H - this.y - this.r);
+    const sAlpha = Math.max(0, 0.3 * (1 - dist / H));
+    const sScale = Math.max(0.15, 1 - dist / H * 0.8);
+    ctx.save();
+    ctx.globalAlpha = sAlpha;
+    ctx.fillStyle = shadowColor;
+    ctx.beginPath();
+    ctx.ellipse(this.x, H - 5, this.r * sScale * 1.1, this.r * sScale * 0.28, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rot);
+
+    if (this.isGold) {
+      ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 18;
+      ctx.beginPath();
+      this.pts.forEach(([px, py], i) => i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py));
+      ctx.closePath();
+      ctx.fillStyle = '#FFD700'; ctx.fill();
+      ctx.shadowBlur = 0; ctx.strokeStyle = '#FFA500'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.beginPath(); ctx.arc(-this.r*.18, -this.r*.22, this.r*.28, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,200,0.6)'; ctx.fill();
+
+    } else if (this.isBlue) {
+      ctx.shadowColor = '#00CCFF'; ctx.shadowBlur = 22;
+      ctx.beginPath();
+      this.pts.forEach(([px, py], i) => i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py));
+      ctx.closePath();
+      // Gradient fill: pale ice core to bright cyan edge
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, this.r);
+      grad.addColorStop(0, '#DDFAFF');
+      grad.addColorStop(0.5, '#00CCFF');
+      grad.addColorStop(1, '#0066CC');
+      ctx.fillStyle = grad; ctx.fill();
+      ctx.shadowBlur = 0; ctx.strokeStyle = '#AAEEFF'; ctx.lineWidth = 2; ctx.stroke();
+      // Inner sparkle
+      ctx.beginPath(); ctx.arc(0, -this.r*.2, this.r*.18, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fill();
+
+    } else {
+      ctx.beginPath();
+      this.pts.forEach(([px, py], i) => i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py));
+      ctx.closePath();
+      ctx.fillStyle = this.color; ctx.fill();
+      ctx.strokeStyle = '#333344'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.beginPath(); ctx.arc(-this.r*.22, -this.r*.26, this.r*.22, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+// Storm announcement text — big, dramatic, short-lived
+class StormFx {
+  constructor(x, y) {
+    this.x = x; this.y = y; this.vy = -35;
+    this.age = 0; this.dur = 1.6;
+  }
+  get alive() { return this.age < this.dur; }
+  update(dt) { this.age += dt; this.y += this.vy * dt; this.vy *= 0.97; }
+  draw(ctx) {
+    const t     = this.age / this.dur;
+    const alpha = t < 0.12 ? t / 0.12 : t > 0.65 ? 1 - (t - 0.65) / 0.35 : 1;
+    const scale = t < 0.1 ? t / 0.1 : 1;
+    const sz    = Math.round(32 * scale);
+    if (sz < 2) return;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.globalAlpha = Math.max(0, alpha);
+    ctx.font = `${sz}px 'Press Start 2P', monospace`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 7; ctx.strokeText('⚡ STORM!', 0, 0);
+    ctx.fillStyle = '#00CCFF'; ctx.fillText('⚡ STORM!', 0, 0);
+    ctx.restore();
+  }
+}
+
+// Positive floating text for gold rock collection
+class GoodFx {
+  constructor(x, y, text) {
+    this.x = x; this.y = y; this.text = text;
+    this.vy = -110; this.age = 0; this.dur = 1.1;
+  }
+  get alive() { return this.age < this.dur; }
+  update(dt) { this.age += dt; this.y += this.vy * dt; this.vy *= 0.93; }
+  draw(ctx) {
+    const t     = this.age / this.dur;
+    const alpha = t > 0.65 ? 1 - (t - 0.65) / 0.35 : 1;
+    const scale = t < 0.12 ? t / 0.12 : 1;
+    const sz    = Math.round(28 * scale);
+    if (sz < 2) return;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.globalAlpha = Math.max(0, alpha);
+    ctx.font = `${sz}px 'Press Start 2P', monospace`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 5; ctx.strokeText(this.text, 0, 0);
+    ctx.fillStyle = '#FFD700'; ctx.fillText(this.text, 0, 0);
+    ctx.restore();
+  }
+}
+
+class BonkFx {
+  constructor(x, y) {
+    this.x = x; this.y = y;
+    this.vy  = -95;
+    this.rot = rnd(-0.4, 0.4);
+    this.age = 0; this.dur = 1.0;
+  }
+  get alive() { return this.age < this.dur; }
+  update(dt) { this.age += dt; this.y += this.vy * dt; this.vy *= 0.92; }
+  draw(ctx) {
+    const t     = this.age / this.dur;
+    const scale = t < 0.2 ? t / 0.2 : 1 - (t - 0.2) * 0.4;
+    const alpha = t > 0.6 ? 1 - (t - 0.6) / 0.4 : 1;
+    const sz    = Math.round(44 * Math.max(0.1, scale));
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rot);
+    ctx.globalAlpha = Math.max(0, alpha);
+    ctx.font = `${sz}px 'Press Start 2P', monospace`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 6; ctx.strokeText('BONK!', 0, 0);
+    ctx.fillStyle = '#FFE600'; ctx.fillText('BONK!', 0, 0);
+    ctx.restore();
+  }
+}
+
+class LeanDodge {
+  constructor() {
+    this.rocks      = [];
+    this.bonkFx     = [];
+    this.goodFx     = [];
+    this.stormFx    = [];
+    this.scores     = [0, 0];
+    // Per-half spawn timers ensure even coverage across both sides
+    this._spawnT    = [rnd(0.15, 0.35), rnd(0.25, 0.5)];
+    this._elapsed   = 0;
+    this._hitCd     = [0, 0];
+    this._circles   = [null, null];
+    this._boxes     = [null, null];
+    this._grace     = 2.0;
+    this._bannerT   = 5.0;
+    // Storm queue: [{spawnAt, xMin, xMax, diff}] — rocks deferred to the future
+    this._stormQ    = [];
+    // Storm visual tint per side — seconds remaining
+    this._stormTint = [0, 0];
+    this._diff      = 0; // cache for storm spawning
+    // Per-half special spawn counters: [half][0=gold, 1=blue]
+    this._specialCount = [[0, 0], [0, 0]];
+  }
+
+  init(canvas) {
+    this.canvas = canvas;
+    this.ctx    = canvas.getContext('2d');
+    this.rocks  = [];
+    this.bonkFx = [];
+    this.goodFx = [];
+    this.stormFx = [];
+    this.scores = [0, 0];
+    this._grace  = 2.0;
+    this._bannerT = 5.0;
+    this._circles = [null, null];
+    this._stormQ  = [];
+    this._stormTint = [0, 0];
+    this._spawnT  = [rnd(0.15, 0.35), rnd(0.25, 0.5)];
+    this._specialCount = [[0, 0], [0, 0]];
+  }
+
+  // Build a face hitbox from head keypoints only.
+  // Works correctly when players are framed from the waist up — hips not needed.
+  //
+  // Keypoint indices used:
+  //   0 = nose, 1 = left_eye, 2 = right_eye, 3 = left_ear, 4 = right_ear
+  //
+  // Center: average of all detected head keypoints (nose dominant)
+  // Radius: derived from ear-to-ear width → eye-to-eye → fallback fixed size
+  _poseToCircle(pose, canvasW, canvasH) {
+    if (!pose || !pose.keypoints) return null;
+
+    // Scale from MoveNet's video-pixel space to canvas pixel space.
+    // S.pe.vw/vh are the ACTUAL video dimensions (e.g. 1280×720).
+    // Using hardcoded 640×480 caused 2× position error for 1280px webcams.
+    const vw = S.pe.vw || 640;
+    const vh = S.pe.vh || 480;
+    const sx = canvasW / vw;
+    const sy = canvasH / vh;
+
+    const kps  = pose.keypoints;
+    const nose = kps[0], lEye = kps[1], rEye = kps[2], lEar = kps[3], rEar = kps[4];
+
+    // Store raw scores for the debug panel — always, regardless of confidence
+    this._faceScores = {
+      nose: nose?.score ?? 0,
+      lEye: lEye?.score ?? 0,
+      rEye: rEye?.score ?? 0,
+      lEar: lEar?.score ?? 0,
+      rEar: rEar?.score ?? 0,
+    };
+
+    // Require only the nose — no hip, no shoulder, no confidence gate
+    if (!nose) return null;
+
+    // Head centre = average of all available face keypoints
+    const headKps = [nose, lEye, rEye, lEar, rEar].filter(k => k);
+    const avgX = headKps.reduce((s, k) => s + k.x, 0) / headKps.length;
+    const avgY = headKps.reduce((s, k) => s + k.y, 0) / headKps.length;
+
+    // MIRROR the x coordinate to match drawMirrored display.
+    // MoveNet returns x in camera space (x=0 = camera-left = user's right).
+    // drawMirrored maps camera-left → canvas-right: display_x = canvasW - cam_x * sx.
+    // Without this flip, the circle moves opposite to the visible webcam image.
+    const cx = canvasW - avgX * sx;
+    const cy = avgY * sy;
+
+    // Store the corrected nose position for the debug crosshair marker
+    this._noseCanvas = { x: canvasW - nose.x * sx, y: nose.y * sy };
+
+    // Hitbox tied to character sprite size
+    const r = HITBOX_R;
+    return { x: cx, y: cy, r };
+  }
+
+  _margin() { return 28; } // rock spawn margin from edges / midline
+
+  // Returns an adjusted probability for a special type on `half`.
+  // Each unit of deficit (other half has seen more of this type) nudges
+  // the probability up by 4 pp; being ahead nudges it down.
+  // Clamped to [0.02, 0.20] so it never becomes deterministic.
+  _adjustedProb(half, typeIdx, base) {
+    const deficit = this._specialCount[1 - half][typeIdx] - this._specialCount[half][typeIdx];
+    return Math.max(0.02, Math.min(0.20, base + deficit * 0.04));
+  }
+
+  // Try up to MAX_TRIES positions; return a Rock that clears all nearby rocks,
+  // or null if no clear spot found this frame (spawn skipped, not a stall).
+  // Uses per-half biased probabilities so specials are distributed fairly.
+  // Special rocks get extra clearance so they're always visually distinct.
+  _trySpawn(W, H, diff, xMin, xMax, half) {
+    const goldProb = this._adjustedProb(half, 0, 0.07);
+    const blueProb = this._adjustedProb(half, 1, 0.07);
+    const MAX_TRIES = 8;
+    for (let i = 0; i < MAX_TRIES; i++) {
+      const rock = new Rock(W, H, diff, xMin, xMax, goldProb, blueProb);
+      // Special rocks need more breathing room so players can recognise them
+      const isSpecial = rock.isGold || rock.isBlue;
+      const minGap = isSpecial ? rock.r * 3.2 : rock.r * 2.0;
+
+      // Only check rocks near the entry zone — rocks that have already fallen
+      // are fine to be close since they won't look like a spawn-pile
+      const blocked = this.rocks.some(existing => {
+        if (existing.y > H * 0.35) return false; // already falling — ignore
+        const dx = Math.abs(rock.x - existing.x);
+        const combinedGap = minGap + existing.r * (existing.isGold || existing.isBlue ? 2.0 : 1.0);
+        return dx < combinedGap;
+      });
+
+      if (!blocked) {
+        // Record this special so the deficit stays current
+        if (rock.isGold) this._specialCount[half][0]++;
+        if (rock.isBlue) this._specialCount[half][1]++;
+        return rock;
+      }
+    }
+    return null; // couldn't place cleanly — skip this spawn tick
+  }
+
+  _launchStorm(targetSide, W, H) {
+    Audio.storm();
+    // Visual: tint + floating text on the victim's side
+    this._stormTint[targetSide] = 2.2;
+    const stormCX = targetSide === 0 ? W * 0.25 : W * 0.75;
+    this.stormFx.push(new StormFx(stormCX, H * 0.38));
+
+    // Queue 8-14 rocks that rain down over the next 1.5s
+    const count       = rndInt(8, 14);
+    const stormWindow = rnd(0.9, 1.6);
+    const xMin = targetSide === 0 ? this._margin() : W / 2 + this._margin();
+    const xMax = targetSide === 0 ? W / 2 - this._margin() : W - this._margin();
+    for (let i = 0; i < count; i++) {
+      this._stormQ.push({
+        spawnAt: this._elapsed + rnd(0, stormWindow),
+        xMin, xMax,
+        diff: this._diff,
+      });
+    }
+  }
+
+  update(dt, poses) {
+    this._elapsed += dt;
+    this._grace    = Math.max(0, this._grace - dt);
+    this._bannerT  = Math.max(0, this._bannerT - dt);
+    this._hitCd    = this._hitCd.map(c => Math.max(0, c - dt));
+
+    const W = this.canvas.width;
+    const H = this.canvas.height;
+    const diff = Math.min(this._elapsed / 45, 1);
+
+    // ── PLAYER ASSIGNMENT — position-based, not sort-based ──────────
+    // Each detected pose is assigned to P1 (left half) or P2 (right half)
+    // based on where it appears on the mirrored canvas. This is immune to
+    // MoveNet's sort-order flipping, which caused characters to swap.
+    const raw = poses.map(p => this._poseToCircle(p || null, W, H));
+    const targets = [null, null];
+    raw.forEach(circle => {
+      if (!circle) return;
+      const idx = circle.x < W / 2 ? 0 : 1;
+      // If two poses land in the same half, keep the one already there (stability)
+      if (!targets[idx]) targets[idx] = circle;
+    });
+
+    // ── POSITION SMOOTHING — lerp toward target to kill jitter ──────
+    // Higher LERP (0.75) = snappier response = smaller gap between
+    // visual character position and actual face position, improving
+    // collision feel. MoveNet already smooths on its side.
+    const LERP = 0.75;
+    [0, 1].forEach(i => {
+      const t = targets[i];
+      if (!t) { this._circles[i] = null; return; }
+      if (!this._circles[i]) { this._circles[i] = { ...t }; return; }
+      const c = this._circles[i];
+      c.x = c.x + (t.x - c.x) * LERP;
+      c.y = c.y + (t.y - c.y) * LERP;
+      c.r = t.r;
+    });
+
+    this._boxes = this._circles.map(c =>
+      c ? { x: c.x - c.r, y: c.y - c.r, w: c.r * 2, h: c.r * 2 } : null
+    );
+
+    this._diff = diff;
+
+    // ── SPAWN — per half, for even full-width coverage ───────────────
+    // Each half has its own timer so both sides always have rocks to dodge.
+    if (W > 10 && H > 10) {
+      for (let half = 0; half < 2; half++) {
+        this._spawnT[half] -= dt;
+        if (this._spawnT[half] <= 0) {
+          const xMin = half === 0 ? this._margin() : W / 2;
+          const xMax = half === 0 ? W / 2          : W - this._margin();
+          const rock = this._trySpawn(W, H, diff, xMin, xMax, half);
+          if (rock) {
+            this.rocks.push(rock);
+            // 25% burst: a second rock, must also pass the spacing check
+            if (Math.random() < 0.25) {
+              const burst = this._trySpawn(W, H, diff, xMin, xMax, half);
+              if (burst) this.rocks.push(burst);
+            }
+          }
+          const base = rnd(0.16, 0.40) * (1 - diff * 0.28) / DEV.spawnMult;
+          this._spawnT[half] = Math.max(0.10, base);
+        }
+      }
+    }
+
+    // ── STORM QUEUE — drain deferred storm rocks ──────────────────────
+    this._stormQ = this._stormQ.filter(entry => {
+      if (this._elapsed < entry.spawnAt) return true;
+      if (W > 10 && H > 10) {
+        const r = new Rock(W, H, entry.diff, entry.xMin, entry.xMax);
+        r.type = 'normal'; r.isGold = false; r.isBlue = false; // storm rocks are plain
+        r.speed *= 1.35; // storm rocks fall noticeably faster
+        this.rocks.push(r);
+      }
+      return false;
+    });
+
+    // ── STORM TINT COUNTDOWN ─────────────────────────────────────────
+    this._stormTint = this._stormTint.map(t => Math.max(0, t - dt));
+
+    // ── COLLISION ─────────────────────────────────────────────────────
+    // All rock types (normal, gold, blue, storm) use the same path:
+    //   rock.update(dt)            — moves rock, saves px/py for CCD
+    //   rock.sweepsThrough(...)    — swept-sphere CCD, catches tunneling
+    //   rock.dead = true           — marked before effect branch
+    //   effect branch              — gold / blue / normal
+    //
+    // Blue rocks do NOT add a BONK. They only trigger the storm.
+    this.rocks = this.rocks.filter(rock => {
+      rock.update(dt);                          // saves px,py then moves
+      if (rock.isOffscreen(H)) return false;   // despawn after movement
+
+      if (!rock.dead && this._grace <= 0) {
+        this._circles.forEach((circle, pi) => {
+          if (!circle || this._hitCd[pi] > 0 || rock.dead) return;
+          // Swept-sphere CCD — same check for every rock type
+          if (!rock.sweepsThrough(circle.x, circle.y, circle.r)) return;
+
+          rock.dead = true;
+
+          if (rock.isGold) {
+            // ── GOLD: reduce BONK count, no penalty ──────────────────
+            this._hitCd[pi] = 0.8;
+            const reduction = Math.min(2, this.scores[pi]);
+            this.scores[pi] = Math.max(0, this.scores[pi] - 2);
+            const label = reduction > 0 ? `-${reduction} BONK${reduction !== 1 ? 'S' : ''}!` : 'LUCKY!';
+            this.goodFx.push(new GoodFx(circle.x, circle.y - 30, label));
+            Audio.goldHit();
+
+          } else if (rock.isBlue) {
+            // ── BLUE: NO BONK — only triggers storm on opponent ──────
+            this._hitCd[pi] = 0.5; // shorter cooldown since no penalty
+            this._launchStorm(1 - pi, W, H);
+
+          } else {
+            // ── NORMAL: +1 BONK ──────────────────────────────────────
+            this._hitCd[pi] = 0.8;
+            this.scores[pi]++;
+            this.bonkFx.push(new BonkFx(rock.x, Math.min(rock.y, H - 60)));
+            Audio.bonk();
+          }
+        });
+      }
+
+      return !rock.dead;
+    });
+
+    // Update effects
+    this.bonkFx  = this.bonkFx.filter(e => { e.update(dt); return e.alive; });
+    this.goodFx  = this.goodFx.filter(e => { e.update(dt); return e.alive; });
+    this.stormFx = this.stormFx.filter(e => { e.update(dt); return e.alive; });
+  }
+
+  render(poses) {
+    const ctx = this.ctx;
+    const W   = this.canvas.width;
+    const H   = this.canvas.height;
+
+    // NOTE: no clearRect here — the webcam drawMirrored() call in the
+    // game loop's onRender() already covers the full canvas each frame.
+    // Calling clearRect here would wipe the webcam image.
+
+    // Zone divider
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10, 8]);
+    ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // Grace period overlay
+    if (this._grace > 0) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.font = `bold 22px 'Archivo Black', sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#FFE600';
+      ctx.fillText(`GET READY... ${Math.ceil(this._grace)}`, W / 2, H / 2);
+      ctx.restore();
+    }
+
+    // Hit flash — red tint on the side that just got hit
+    this._hitCd.forEach((cd, i) => {
+      if (cd < 0.5) return;
+      ctx.save();
+      ctx.fillStyle = `rgba(255,45,120,${(cd - 0.5) * 0.55})`;
+      ctx.fillRect(i === 0 ? 0 : W / 2, 0, W / 2, H);
+      ctx.restore();
+    });
+
+    // Storm tint — electric blue pulse on the side being stormed
+    this._stormTint.forEach((t, i) => {
+      if (t <= 0) return;
+      const pulse = Math.sin(this._elapsed * 18) * 0.5 + 0.5; // fast flicker
+      const alpha = Math.min(t / 2.2, 1) * 0.28 * (0.6 + 0.4 * pulse);
+      ctx.save();
+      ctx.fillStyle = `rgba(0,180,255,${alpha})`;
+      ctx.fillRect(i === 0 ? 0 : W / 2, 0, W / 2, H);
+      ctx.restore();
+    });
+
+    // ── PLAYER CHARACTERS ─────────────────────────────────────────
+    const P_BASE = ['#2D6BFF', '#FF2D78'];
+    this._circles.forEach((circle, i) => {
+      const halfCX = i === 0 ? W * 0.25 : W * 0.75;
+      if (!circle) {
+        // Not detected — blinking prompt
+        const blink = Math.floor(this._elapsed * 2) % 2 === 0;
+        ctx.save();
+        ctx.globalAlpha = blink ? 0.9 : 0.35;
+        ctx.font = `bold 14px 'Archivo Black', sans-serif`;
+        ctx.textAlign = 'center'; ctx.fillStyle = '#FFE600';
+        ctx.fillText('⚠ STAND IN VIEW', halfCX, H * 0.5);
+        ctx.restore();
+      } else {
+        // Draw the character at the tracked nose/face position
+        const isHit = this._hitCd[i] > 0.4;
+        drawCharacter(ctx, circle.x, circle.y, P_BASE[i], isHit);
+
+        // Debug: show hitbox circle and label
+        if (DEV.debugOverlay) {
+          ctx.save();
+          ctx.strokeStyle = '#FFE600'; ctx.lineWidth = 1.5;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath(); ctx.arc(circle.x, circle.y, circle.r, 0, Math.PI * 2); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.font = '10px monospace'; ctx.fillStyle = '#FFE600';
+          ctx.textAlign = 'center';
+          ctx.fillText(`P${i+1} r=${circle.r}`, circle.x, circle.y + circle.r + 12);
+          ctx.restore();
+        }
+      }
+    });
+
+    // ── SKELETON & KEYPOINTS ──────────────────────────────────────
+    // Always draw when debug overlay is on; also when trackingViz is on
+    if (DEV.debugOverlay || DEV.trackingViz) {
+      const vw = S.pe.vw || 640, vh = S.pe.vh || 480;
+      const sx = W / vw, sy = H / vh;
+      // Helper: convert a keypoint from camera space to mirrored canvas space
+      const kpX = k => W - k.x * sx;
+      const kpY = k => k.y * sy;
+      poses.forEach((pose, i) => {
+        if (!pose) return;
+        const color = P_COLORS[i] + '0.9)';
+        const CONNS = [[5,6],[5,7],[7,9],[6,8],[8,10],[5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16]];
+        ctx.save();
+        ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.lineCap = 'round';
+        CONNS.forEach(([a, b]) => {
+          const ka = pose.keypoints[a], kb = pose.keypoints[b];
+          if (!ka || !kb || ka.score < 0.1 || kb.score < 0.1) return;
+          ctx.beginPath(); ctx.moveTo(kpX(ka), kpY(ka)); ctx.lineTo(kpX(kb), kpY(kb)); ctx.stroke();
+        });
+        // Keypoints with index labels in debug mode
+        pose.keypoints.forEach((k, ki) => {
+          if (!k || k.score < 0.1 || ki < 5) return;
+          const kx = kpX(k), ky = kpY(k);
+          ctx.beginPath(); ctx.arc(kx, ky, DEV.debugOverlay ? 8 : 5, 0, Math.PI * 2);
+          ctx.fillStyle = color; ctx.fill();
+          if (DEV.debugOverlay) {
+            ctx.font = '9px monospace'; ctx.fillStyle = '#fff';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(ki, kx, ky);
+          }
+        });
+        ctx.restore();
+      });
+    }
+
+    // ── ROCK HITBOXES (debug) ──────────────────────────────────────
+    if (DEV.debugOverlay) {
+      this.rocks.forEach(r => {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,200,0,0.8)'; ctx.lineWidth = 2;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.arc(r.x, r.y, r.r * 0.75, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      });
+    }
+
+    // Rocks
+    this.rocks.forEach(r => r.draw(ctx, H));
+
+    // BONK effects
+    this.bonkFx.forEach(e => e.draw(ctx));
+
+    // Gold rock collection effects
+    this.goodFx.forEach(e => e.draw(ctx));
+
+    // Storm announcement effects
+    this.stormFx.forEach(e => e.draw(ctx));
+
+    // Instruction banner — two alternating messages
+    if (this._bannerT > 0) {
+      const alpha = this._bannerT < 1 ? this._bannerT : 1;
+      // Switch between tip 1 and tip 2 every 2s
+      const showGoldTip = Math.floor((5 - this._bannerT) / 2) % 2 === 1 && this._bannerT < 4;
+      const msg  = showGoldTip
+        ? '⭐  GOLD ROCKS REDUCE YOUR BONK COUNT!'
+        : '🪨  DODGE THE ROCKS — LOWEST BONKS WINS!';
+      const col  = showGoldTip ? '#FFD700' : '#FFE600';
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.font = `bold 16px 'Archivo Black', sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const tw = ctx.measureText(msg).width;
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(W / 2 - tw / 2 - 12, H * 0.87 - 15, tw + 24, 30);
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+      ctx.strokeText(msg, W / 2, H * 0.87);
+      ctx.fillStyle = col;
+      ctx.fillText(msg, W / 2, H * 0.87);
+      ctx.restore();
+    }
+
+    // ── PERSISTENT TRACKING STATUS BAR ────────────────────────────
+    // Always visible in bottom-left during gameplay — proves tracking is alive
+    this._drawStatusBar(ctx, poses, W, H);
+  }
+
+  _drawStatusBar(ctx, poses, W, H) {
+    const fmt  = v => (v == null || v < 0) ? ' n/a' : v.toFixed(2);
+    const fmtC = c => c ? `r=${Math.round(c.r)} (${Math.round(c.x)},${Math.round(c.y)})` : 'NONE';
+
+    // Read face keypoint scores from the raw pose (not filtered through _poseToCircle)
+    const p0kps = TRACK.rawPoses[0]?.keypoints;
+    const f0 = p0kps ? {
+      nose: p0kps[0]?.score, lEye: p0kps[1]?.score, rEye: p0kps[2]?.score,
+      lEar: p0kps[3]?.score, rEar: p0kps[4]?.score,
+    } : {};
+
+    const lines = [
+      `MODEL: ${TRACK.modelState}`,
+      `VIDEO: ${TRACK.videoState}`,
+      `INFERENCES: ${TRACK.inferenceCount}`,
+      `POSES DETECTED: ${TRACK.rawPoses.length}`,
+      `─── P1 FACE KEYPOINTS ──────────`,
+      `  NOSE:   ${fmt(f0.nose)}`,
+      `  L.EYE:  ${fmt(f0.lEye)}   R.EYE:  ${fmt(f0.rEye)}`,
+      `  L.EAR:  ${fmt(f0.lEar)}   R.EAR:  ${fmt(f0.rEar)}`,
+      `P1 FACE HITBOX: ${fmtC(this._circles[0])}`,
+      `P2 FACE HITBOX: ${fmtC(this._circles[1])}`,
+      DEV.debugOverlay ? '[D] DEBUG ON — press D to toggle' : '[D] D = debug overlay',
+    ];
+    const lineH = 15, padX = 8, padY = 4;
+    const boxH = lines.length * lineH + padY * 2;
+    const boxW = 340;
+    const bx = 4, by = H - boxH - 38; // above the player labels bar
+    ctx.save();
+    ctx.globalAlpha = 0.82;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(bx, by, boxW, boxH);
+    ctx.globalAlpha = 1;
+    ctx.font = '11px monospace';
+    ctx.textBaseline = 'top';
+    lines.forEach((line, i) => {
+      const isOk  = line.includes('ready') ||
+                    (line.includes('DETECTED') && TRACK.rawPoses.length > 0) ||
+                    line.includes('HITBOX: r=') ||
+                    (line.includes('NOSE') && f0.nose > 0.1);
+      const isErr = line.includes('error') ||
+                    line.includes('NONE') ||
+                    line.includes('no video');
+      const isDim = line.startsWith('─') || line.startsWith('[D]');
+      ctx.fillStyle = isDim ? '#666688' : isErr ? '#FF6B6B' : isOk ? '#AAFF00' : '#CCCCCC';
+      ctx.fillText(line, bx + padX, by + padY + i * lineH);
+    });
+    ctx.restore();
+  }
+
+  // _drawSkeleton removed — logic inlined into render() for debug control
+
+  getScores() { return this.scores; }
+
+  getWinner() {
+    const [a, b] = this.scores;
+    return a < b ? 0 : b < a ? 1 : -1; // lower score wins
+  }
+
+  getMVP() {
+    const [a, b] = this.scores;
+    if (a === 0 && b === 0) return { text: 'Both survived unscathed!', emoji: '🛡️' };
+    if (a === 0) return { text: 'P1 dodged everything!', emoji: '👻' };
+    if (b === 0) return { text: 'P2 dodged everything!', emoji: '👻' };
+    if (Math.abs(a - b) === 1) return { text: 'Incredibly close match!', emoji: '😅' };
+    if (Math.abs(a - b) >= 5) return { text: 'Total domination!', emoji: '💥' };
+    return { text: 'Dodge harder next time!', emoji: '🪨' };
+  }
+
+  destroy() {
+    this.rocks = []; this.bonkFx = []; this.goodFx = [];
+    this.stormFx = []; this._stormQ = [];
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  FRUIT FRENZY
+// ═══════════════════════════════════════════════════════════════════
+
+// ── Fruit type definitions ──────────────────────────────────────────
+const FRUIT_DEFS = [
+  { id:'strawberry', pts:1,  r:52, col:'#EE3344', dark:'#CC1122', leaf:'#22AA55' },
+  { id:'orange',     pts:2,  r:58, col:'#FF8800', dark:'#CC5500', leaf:'#22AA55' },
+  { id:'watermelon', pts:3,  r:66, col:'#33BB44', dark:'#228833', leaf:null,     inner:'#EE4455' },
+  { id:'pineapple',  pts:5,  r:60, col:'#FFDD00', dark:'#CC9900', leaf:'#22AA55' },
+];
+// Weighted random selection — pineapple rarest, strawberry most common
+const FRUIT_W = [40, 30, 20, 10];
+const FRUIT_W_TOTAL = FRUIT_W.reduce((a, b) => a + b, 0);
+function pickFruitDef() {
+  let r = Math.random() * FRUIT_W_TOTAL;
+  for (let i = 0; i < FRUIT_W.length; i++) { r -= FRUIT_W[i]; if (r <= 0) return FRUIT_DEFS[i]; }
+  return FRUIT_DEFS[0];
+}
+
+// ── Fruit projectile ────────────────────────────────────────────────
+class FruitItem {
+  constructor(x, H, def) {
+    this.def  = def;
+    this.r    = def.r;  // expose radius at top level, same as BombItem
+    this.x    = x;
+    this.y    = H + def.r + 4;
+    this.vx   = rnd(-70, 70);
+    // Weighted arc tiers — 30% low, 50% medium, 20% high
+    // gives a mix of targets at different screen heights
+    // Arc tiers — no low arcs, everything reaches mid-screen or higher.
+    // 45% medium (mid-screen), 35% high (upper third), 20% very high (near top).
+    const arcR = Math.random();
+    this.vy   = arcR < 0.45 ? rnd(-740, -880)   // medium: peaks around mid-screen
+               : arcR < 0.80 ? rnd(-880, -1020)  // high: upper third
+               :                rnd(-1020, -1150);// very high: near the top
+    this.rot  = 0;
+    this.rotS = rnd(-3.5, 3.5);
+    this.dead = false;
+    this.px   = x; this.py = this.y;
+  }
+  update(dt) {
+    this.px = this.x; this.py = this.y;
+    this.vy += 920 * dt;
+    this.x  += this.vx * dt;
+    this.y  += this.vy * dt;
+    this.rot += this.rotS * dt;
+  }
+  isOffscreen(H) { return this.y > H + this.def.r * 2; }
+  draw(ctx) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rot);
+    this._shape(ctx);
+    ctx.restore();
+  }
+  _shape(ctx) {
+    const { id, r, col, dark, leaf, inner } = this.def;
+    ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 4;
+
+    if (id === 'strawberry') {
+      // Body
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2);
+      ctx.fillStyle = col; ctx.fill();
+      // Shading on lower half
+      ctx.beginPath(); ctx.arc(0, r*0.18, r*0.82, 0, Math.PI);
+      ctx.fillStyle = dark; ctx.fill();
+      ctx.shadowColor = 'transparent';
+      // Seeds
+      ctx.fillStyle = '#FFEEAA';
+      [[-7,-3],[7,-3],[0,4],[-5,6],[5,6],[0,-9]].forEach(([sx,sy]) => {
+        ctx.beginPath(); ctx.ellipse(sx, sy, 1.5, 2.4, 0.3, 0, Math.PI*2); ctx.fill();
+      });
+      // Leaves
+      ctx.fillStyle = leaf;
+      [[-0.4, -3], [0.4, -3]].forEach(([a, ox]) => {
+        ctx.beginPath(); ctx.ellipse(ox, -r+1, 4, 8, a, 0, Math.PI*2); ctx.fill();
+      });
+
+    } else if (id === 'orange') {
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2);
+      ctx.fillStyle = col; ctx.fill();
+      ctx.shadowColor = 'transparent';
+      // Segment lines
+      ctx.strokeStyle = 'rgba(0,0,0,0.12)'; ctx.lineWidth = 1.3;
+      for (let i = 0; i < 7; i++) {
+        const a = (i/7)*Math.PI*2;
+        ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r); ctx.stroke();
+      }
+      // Navel
+      ctx.beginPath(); ctx.arc(0, 0, r*0.12, 0, Math.PI*2);
+      ctx.fillStyle = dark; ctx.fill();
+      // Highlight
+      ctx.beginPath(); ctx.arc(-r*0.3, -r*0.32, r*0.2, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,0.38)'; ctx.fill();
+
+    } else if (id === 'watermelon') {
+      // Green rind
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2);
+      ctx.fillStyle = col; ctx.fill();
+      ctx.shadowColor = 'transparent';
+      // Light stripes
+      ctx.strokeStyle = '#66DD77'; ctx.lineWidth = 3.5;
+      for (let i = 0; i < 4; i++) {
+        ctx.save(); ctx.rotate((i/4)*Math.PI*2);
+        ctx.beginPath(); ctx.moveTo(0, -r*0.12); ctx.lineTo(0, -r*0.92); ctx.stroke();
+        ctx.restore();
+      }
+      // Red flesh
+      ctx.beginPath(); ctx.arc(0, 0, r*0.7, 0, Math.PI*2);
+      ctx.fillStyle = inner; ctx.fill();
+      // Seeds
+      ctx.fillStyle = '#111';
+      [[-8,0],[8,0],[0,-8],[0,8],[-5,-6],[5,-6]].forEach(([sx,sy]) => {
+        ctx.beginPath(); ctx.ellipse(sx, sy, 2.2, 3.2, 0.2, 0, Math.PI*2); ctx.fill();
+      });
+      // Highlight
+      ctx.beginPath(); ctx.arc(-r*0.3, -r*0.3, r*0.17, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.fill();
+
+    } else { // pineapple
+      // Body
+      ctx.beginPath(); ctx.ellipse(0, r*0.1, r*0.75, r, 0, 0, Math.PI*2);
+      ctx.fillStyle = col; ctx.fill();
+      ctx.shadowColor = 'transparent';
+      // Grid texture
+      ctx.strokeStyle = dark; ctx.lineWidth = 1;
+      for (let i = -3; i <= 3; i++) {
+        ctx.beginPath(); ctx.moveTo(i*r*0.25, -r*0.88); ctx.lineTo(i*r*0.25, r*0.88); ctx.stroke();
+      }
+      for (let i = -4; i <= 4; i++) {
+        ctx.beginPath(); ctx.moveTo(-r*0.8, i*r*0.21); ctx.lineTo(r*0.8, i*r*0.21); ctx.stroke();
+      }
+      // Crown
+      ctx.fillStyle = '#22AA55';
+      [-0.5,-0.22,0,0.22,0.5].forEach(a => {
+        ctx.save(); ctx.translate(a*r*0.38, -r*0.88); ctx.rotate(a);
+        ctx.beginPath(); ctx.ellipse(0, -r*0.32, r*0.1, r*0.36, 0, 0, Math.PI*2);
+        ctx.fill(); ctx.restore();
+      });
+      // Highlight
+      ctx.beginPath(); ctx.arc(-r*0.25, -r*0.28, r*0.17, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fill();
+    }
+  }
+}
+
+// ── Bomb projectile ─────────────────────────────────────────────────
+class BombItem {
+  constructor(x, H) {
+    this.x    = x; this.y = H + 54;
+    this.r    = 54;
+    this.vx   = rnd(-55, 55);
+    const bArcR = Math.random();
+    this.vy   = bArcR < 0.45 ? rnd(-740, -880) : bArcR < 0.80 ? rnd(-880, -1020) : rnd(-1020, -1140);
+    this.rot  = 0; this.rotS = rnd(-2, 2);
+    this.dead = false; this._t = 0;
+  }
+  update(dt) {
+    this.vy += 920 * dt;
+    this.x  += this.vx * dt; this.y += this.vy * dt;
+    this.rot += this.rotS * dt; this._t += dt * 9;
+  }
+  isOffscreen(H) { return this.y > H + this.r * 2; }
+  draw(ctx) {
+    const r = this.r;
+    ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rot);
+    ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 4;
+    // Body
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2);
+    ctx.fillStyle = '#1A1A1A'; ctx.fill();
+    ctx.strokeStyle = '#444'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.shadowColor = 'transparent';
+    // Ring
+    ctx.beginPath(); ctx.arc(0, 0, r*0.62, 0, Math.PI*2);
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 3; ctx.stroke();
+    // Warning cross
+    ctx.strokeStyle = '#CC0000'; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-r*0.32, -r*0.32); ctx.lineTo(r*0.32, r*0.32); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(r*0.32, -r*0.32); ctx.lineTo(-r*0.32, r*0.32); ctx.stroke();
+    // Fuse cord
+    ctx.strokeStyle = '#996600'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(r*0.28, -r*0.68);
+    ctx.quadraticCurveTo(r*0.65, -r*1.1, r*0.18, -r*1.42);
+    ctx.stroke();
+    // Fuse spark
+    const spark = (Math.sin(this._t) + 1) * 0.5;
+    ctx.beginPath(); ctx.arc(r*0.18, -r*1.42, 4.5, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(255,180,0,${0.5 + spark*0.5})`; ctx.fill();
+    ctx.beginPath(); ctx.arc(r*0.18, -r*1.42, 2, 0, Math.PI*2);
+    ctx.fillStyle = '#fff'; ctx.fill();
+    // Highlight
+    ctx.beginPath(); ctx.arc(-r*0.28, -r*0.3, r*0.18, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ── Effects ─────────────────────────────────────────────────────────
+class SliceFx {
+  constructor(x, y, col) {
+    this.x = x; this.y = y; this.age = 0; this.dur = 0.6;
+    this.parts = Array.from({length:7}, () => {
+      const a = Math.random()*Math.PI*2, spd = rnd(90,260);
+      return { dx:0, dy:0, vx:Math.cos(a)*spd, vy:Math.sin(a)*spd-70, r:rnd(5,13), col };
+    });
+  }
+  get alive() { return this.age < this.dur; }
+  update(dt) {
+    this.age += dt;
+    this.parts.forEach(p => { p.dx += p.vx*dt; p.dy += p.vy*dt; p.vy += 320*dt; });
+  }
+  draw(ctx) {
+    const alpha = 1 - this.age/this.dur;
+    this.parts.forEach(p => {
+      ctx.save(); ctx.globalAlpha = alpha * 0.9;
+      ctx.shadowColor = p.col; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.arc(this.x+p.dx, this.y+p.dy, p.r, 0, Math.PI*2);
+      ctx.fillStyle = p.col; ctx.fill(); ctx.restore();
+    });
+  }
+}
+
+class ScoreFx {
+  constructor(x, y, pts, isBomb) {
+    this.x=x; this.y=y; this.pts=pts; this.isBomb=isBomb;
+    this.vy=-115; this.age=0; this.dur=0.95;
+  }
+  get alive() { return this.age < this.dur; }
+  update(dt) { this.age+=dt; this.y+=this.vy*dt; this.vy*=0.92; }
+  draw(ctx) {
+    const t=this.age/this.dur, alpha=t>0.6?1-(t-0.6)/0.4:1;
+    const sz=Math.round(26*Math.max(0.1, t<0.1?t/0.1:1));
+    const label = this.isBomb ? '−3!' : `+${this.pts}`;
+    ctx.save(); ctx.globalAlpha=Math.max(0,alpha);
+    ctx.font=`${sz}px 'Press Start 2P',monospace`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.strokeStyle='#000'; ctx.lineWidth=5; ctx.strokeText(label,this.x,this.y);
+    ctx.fillStyle=this.isBomb?'#FF2D78':'#FFE600'; ctx.fillText(label,this.x,this.y);
+    ctx.restore();
+  }
+}
+
+// ── Constants ────────────────────────────────────────────────────────
+// Hysteresis thresholds applied to the SMOOTHED speed value (see FF_SPEED_LERP).
+// ENTER: smoothed speed must reach this to start a slash.
+// EXIT:  smoothed speed must fall below this to end a slash.
+const FF_SLASH_ENTER  = 180;  // px/s — arm movement activates slash
+const FF_SLASH_EXIT   = 55;   // px/s — slash persists well through deceleration
+
+// EMA factor applied to raw wrist positions each frame (0=frozen, 1=raw).
+// 0.72 tracks real arm movement while smoothing single-frame noise.
+const FF_WRIST_LERP   = 0.72;
+
+// EMA factor applied to the computed raw speed each frame.
+// This prevents single-frame jitter spikes from activating the slash state.
+// Jitter: one spike at 350px/s → smoothed to 350×0.4=140 (below ENTER).
+// Real slash: sustained 600px/s → reaches 180 threshold within 1-2 frames.
+const FF_SPEED_LERP   = 0.40;
+
+// Minimum segment length (px) required for a segment to register a cut.
+// Filters near-zero-length "point check" segments caused by jitter activations.
+// With LERP=0.72 and SPEED_LERP=0.40 a genuine slash produces 8+px segments.
+const FF_MIN_SLASH_LEN = 8;
+
+// Blade width added to fruit.r for the hit zone. Generous = forgiving.
+const FF_BLADE_W      = 32;
+
+// How many consecutive frames without a valid keypoint to dead-reckon before
+// giving up and clearing the wrist position. 12 frames ≈ 200ms at 60fps —
+// enough to bridge a brief tracking loss during a wrist rotation.
+const FF_DR_MAX_FRAMES = 12;
+
+const FF_TRAIL_LEN    = 18;   // visual trail history points — longer = more visible arc
+const FF_BOMB_CHANCE  = 0.10; // 10% of spawns are bombs
+
+// ── Main game class — single player ─────────────────────────────────
+class FruitFrenzy {
+  constructor() {
+    this.fruits   = [];
+    this.fxSlice  = [];
+    this.fxScore  = [];
+    this.score    = 0;
+    // Smoothed wrist positions for both wrists of the single player.
+    // [0] = keypoint 9 (left wrist in camera space = right wrist on mirrored screen)
+    // [1] = keypoint 10 (right wrist in camera space = left wrist on mirrored screen)
+    this._wrists      = [null, null];   // current smoothed positions
+    this._prevWrists  = [null, null];   // previous frame
+    this._speed       = [0, 0];         // EMA-smoothed speed per wrist (px/s)
+    this._slashActive = [false, false];
+    this._vel         = [{dx:0,dy:0}, {dx:0,dy:0}]; // for dead reckoning
+    this._drFrames    = [0, 0];         // consecutive frames without a valid keypoint
+    this._trails      = [[], []];       // visual trail — also used for collision
+    this._trailGrew   = [false, false]; // did each trail add a point THIS frame?
+    // Dominant wrist: the single wrist shown and used for collision.
+    // Sticky with a cooldown so it doesn't flicker between hands.
+    this._dominantWi  = 0;
+    this._dominantCd  = 0;
+    this._spawnT      = rnd(0.15, 0.35);
+    this._elapsed     = 0;
+    this._grace       = 1.5;
+    this._bannerT     = 4.5;
+  }
+
+  init(canvas) {
+    this.canvas   = canvas;
+    this.ctx      = canvas.getContext('2d');
+    this.fruits   = []; this.fxSlice = []; this.fxScore = [];
+    this.score    = 0;
+    this._wrists      = [null, null];
+    this._prevWrists  = [null, null];
+    this._speed       = [0, 0];
+    this._slashActive = [false, false];
+    this._vel         = [{dx:0,dy:0}, {dx:0,dy:0}];
+    this._drFrames    = [0, 0];
+    this._trails      = [[], []];
+    this._trailGrew   = [false, false];
+    this._dominantWi  = 0;
+    this._dominantCd  = 0;
+    this._spawnT      = rnd(0.15, 0.35);
+    this._elapsed     = 0; this._grace = 1.5; this._bannerT = 4.5;
+  }
+
+  // Scale + mirror a single keypoint from video space to canvas space.
+  // Returns {x, y} or null if keypoint is missing / low confidence.
+  // Threshold 0.10 (not 0.15) — wrist confidence drops sharply during fast
+  // rotation/pronation; rejecting at 0.15 causes unnecessary tracking gaps.
+  _kp(kp, W, H) {
+    if (!kp || kp.score < 0.10) return null;
+    const vw = S.pe.vw || 640, vh = S.pe.vh || 480;
+    return { x: W - kp.x * (W/vw), y: kp.y * (H/vh) };
+  }
+
+  // Pick the best available pose from the poses array.
+  // Prefers highest pose.score; rejects likely ghost detections (< 0.25).
+  // Falls back to first valid pose when scores are unavailable.
+  _bestPose(poses) {
+    let best = null, bestScore = -1;
+    for (const pose of poses) {
+      if (!pose?.keypoints) continue;
+      const s = pose.score ?? 0.5; // treat unscored poses as moderate confidence
+      if (s < 0.25) continue;
+      if (s > bestScore) { bestScore = s; best = pose; }
+    }
+    return best;
+  }
+
+  // Update both wrist positions from a single pose.
+  // All downstream logic (trail, collision) uses SMOOTHED positions only.
+  _updateWrists(pose, W, H, dt) {
+    [9, 10].forEach((ki, wi) => {
+      const raw        = pose ? this._kp(pose.keypoints[ki], W, H) : null;
+      const prevSmooth = this._wrists[wi];
+      const prevVel    = this._vel[wi];
+
+      // ── 1. Compute new smooth position ──────────────────────────────
+      let smooth = null;
+      if (raw && prevSmooth) {
+        // Normal EMA: tracks real movement, attenuates per-frame noise
+        smooth = {
+          x: prevSmooth.x + (raw.x - prevSmooth.x) * FF_WRIST_LERP,
+          y: prevSmooth.y + (raw.y - prevSmooth.y) * FF_WRIST_LERP,
+        };
+        this._drFrames[wi] = 0; // real read resets DR counter
+      } else if (raw) {
+        smooth = { ...raw }; // first detection — snap to position
+        this._drFrames[wi] = 0;
+      } else if (prevSmooth && this._drFrames[wi] < FF_DR_MAX_FRAMES) {
+        // ── Dead reckoning ─────────────────────────────────────────────
+        // Keypoint temporarily lost: wrist rotation, motion blur, occlusion.
+        // Extrapolate along last velocity with gentle decay.
+        // Runs for up to FF_DR_MAX_FRAMES REGARDLESS of slash state —
+        // this bridges losses in the deceleration zone (EXIT < speed < ENTER)
+        // where the old slash-state gate was causing flicker.
+        const decay = 0.82;
+        smooth = {
+          x: prevSmooth.x + prevVel.dx * decay,
+          y: prevSmooth.y + prevVel.dy * decay,
+        };
+        this._vel[wi] = { dx: prevVel.dx * decay, dy: prevVel.dy * decay };
+        this._drFrames[wi]++;
+      }
+      // No pose and DR exhausted → smooth = null → all state clears naturally
+
+      // ── 2. Record velocity from real reads only ──────────────────────
+      if (raw && smooth && prevSmooth) {
+        this._vel[wi] = { dx: smooth.x - prevSmooth.x, dy: smooth.y - prevSmooth.y };
+      }
+
+      this._prevWrists[wi] = prevSmooth;
+      this._wrists[wi]     = smooth;
+
+      // ── 3. Speed — EMA of raw frame speed (prevents jitter activations) ─
+      // Without smoothing, a single jitter frame can reach 350+px/s (above
+      // ENTER=180) triggering a false slash. FF_SPEED_LERP=0.40 means:
+      //   single jitter frame: 350×0.40 = 140 → below 180 (blocked) ✓
+      //   real swing, 2nd frame: ~140 + Δ×0.40 → reaches 180 quickly ✓
+      let rawSpeed = 0;
+      if (prevSmooth && smooth) {
+        const dx = smooth.x - prevSmooth.x, dy = smooth.y - prevSmooth.y;
+        rawSpeed = Math.sqrt(dx*dx + dy*dy) / (dt || 0.016);
+      }
+      const prevSpeed = this._speed[wi];
+      this._speed[wi] = prevSpeed + (rawSpeed - prevSpeed) * FF_SPEED_LERP;
+      const speed = this._speed[wi];
+
+      // ── 4. Hysteresis slash state ────────────────────────────────────
+      if (speed >= FF_SLASH_ENTER)    this._slashActive[wi] = true;
+      else if (speed < FF_SLASH_EXIT) this._slashActive[wi] = false;
+
+      // ── 5. Trail — used for BOTH display AND collision ───────────────
+      // Trail = full swing arc (fast entry + deceleration via hysteresis).
+      // _trailGrew records whether a new point was added THIS frame.
+      // Collision is gated on _trailGrew so it only fires during active
+      // ongoing wrist movement — not during the hysteresis fade-out.
+      const trail = this._trails[wi];
+      this._trailGrew[wi] = false;
+      if (smooth && this._slashActive[wi]) {
+        trail.push({ ...smooth });
+        this._trailGrew[wi] = true;
+        if (trail.length > FF_TRAIL_LEN) trail.shift();
+      } else if (trail.length > 0) {
+        trail.shift();
+      }
+    });
+  }
+
+  // Choose which wrist is the single "slash source" shown to the player.
+  // Rules (in priority order):
+  //   1. Failover: if current dominant wrist is lost, switch immediately to the other.
+  //   2. Switch: if the other wrist is clearly more active (speed gap ≥ 120 px/s)
+  //              and the cooldown has expired — prevents rapid hand-to-hand flipping.
+  // Called once per frame after _updateWrists.
+  _selectDominantWrist(dt) {
+    this._dominantCd = Math.max(0, this._dominantCd - dt);
+    const wi  = this._dominantWi;
+    const alt = 1 - wi;
+    if (!this._wrists[wi] && this._wrists[alt]) {
+      // Current dominant lost its position — fail over immediately
+      this._dominantWi = alt;
+      this._dominantCd = 0.15;
+    } else if (this._dominantCd <= 0 && this._speed[alt] > this._speed[wi] + 120) {
+      // Other wrist is significantly more active — switch
+      this._dominantWi = alt;
+      this._dominantCd = 0.40;
+    }
+  }
+
+  // Shortest distance from point (px,py) to segment (x1,y1)→(x2,y2)
+  _segDist(x1,y1,x2,y2,px,py) {
+    const dx=x2-x1, dy=y2-y1, lenSq=dx*dx+dy*dy;
+    if (lenSq < 0.001) return Math.hypot(px-x1, py-y1);
+    const t = Math.max(0, Math.min(1, ((px-x1)*dx + (py-y1)*dy) / lenSq));
+    return Math.hypot(px-(x1+t*dx), py-(y1+t*dy));
+  }
+
+  update(dt, poses) {
+    this._elapsed += dt;
+    this._grace    = Math.max(0, this._grace - dt);
+    this._bannerT  = Math.max(0, this._bannerT - dt);
+    const W = this.canvas.width, H = this.canvas.height;
+
+    // ── PICK BEST POSE ────────────────────────────────────────────────
+    const pose = this._bestPose(poses);
+
+    // ── WRIST TRACKING ────────────────────────────────────────────────
+    this._updateWrists(pose, W, H, dt);
+    this._selectDominantWrist(dt);
+
+    // ── SPAWN — full canvas width, single timer ───────────────────────
+    if (W > 10 && H > 10) {
+      this._spawnT -= dt;
+      if (this._spawnT <= 0) {
+        const margin = 55;
+        const x = rnd(margin, W - margin);
+        this.fruits.push(
+          Math.random() < FF_BOMB_CHANCE
+            ? new BombItem(x, H)
+            : new FruitItem(x, H, pickFruitDef())
+        );
+        this._spawnT = Math.max(0.22, rnd(0.38, 0.72) / DEV.spawnMult);
+      }
+    }
+
+    // ── PHYSICS FIRST — fruits move before collision is tested ───────
+    this.fruits.forEach(f => f.update(dt));
+
+    // ── SLASH COLLISION ──────────────────────────────────────────────
+    // Two strict guards before any collision is tested:
+    //
+    // 1. _trailGrew[dominantWi]: the trail ADDED A POINT THIS FRAME.
+    //    When the wrist slows below EXIT, trail starts draining (shift).
+    //    _trailGrew becomes false → collision disabled for the entire
+    //    fade-out phase. This eliminates "stale trail = cut" entirely.
+    //
+    // 2. Only the last 4 trail points (3 segments ≈ 50ms) are tested.
+    //    Historical trail positions tested against current fruit positions
+    //    create temporal mismatch. Limiting to 3 recent segments means
+    //    we're testing the current swing path, not the swing from 200ms ago.
+    const dominantWi = this._dominantWi;
+    if (this._grace <= 0 && this._trailGrew[dominantWi]) {
+      const trail = this._trails[dominantWi];
+      if (trail.length >= 2) {
+        const segStart = Math.max(0, trail.length - 4); // last 3 segments
+        this.fruits.forEach(item => {
+          if (item.dead || item.y > H - item.r) return;
+          let hit = false;
+          for (let si = segStart + 1; si < trail.length && !hit; si++) {
+            const p1 = trail[si - 1], p2 = trail[si];
+            if (Math.hypot(p2.x - p1.x, p2.y - p1.y) < FF_MIN_SLASH_LEN) continue;
+            if (this._segDist(p1.x, p1.y, p2.x, p2.y, item.x, item.y) <= item.r + FF_BLADE_W) hit = true;
+          }
+          if (!hit) return;
+
+          item.dead = true;
+          const col = item instanceof BombItem ? '#FF2222' : item.def.col;
+          this.fxSlice.push(new SliceFx(item.x, item.y, col));
+          if (item instanceof BombItem) {
+            this.score = Math.max(0, this.score - 3);
+            this.fxScore.push(new ScoreFx(item.x, item.y - 24, 3, true));
+            Audio.bonk();
+          } else {
+            this.score += item.def.pts;
+            this.fxScore.push(new ScoreFx(item.x, item.y - 24, item.def.pts, false));
+            Audio.goldHit();
+          }
+        });
+      }
+    }
+
+    // ── CULL ─────────────────────────────────────────────────────────
+    this.fruits  = this.fruits.filter(f => !f.dead && !f.isOffscreen(H));
+    this.fxSlice = this.fxSlice.filter(e => { e.update(dt); return e.alive; });
+    this.fxScore = this.fxScore.filter(e => { e.update(dt); return e.alive; });
+  }
+
+  render(poses) {
+    const ctx = this.ctx;
+    const W = this.canvas.width, H = this.canvas.height;
+
+    // Grace overlay
+    if (this._grace > 0) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.38)'; ctx.fillRect(0,0,W,H);
+      ctx.font = `bold 22px 'Archivo Black',sans-serif`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillStyle='#FFE600'; ctx.fillText('GET READY!', W/2, H/2);
+      ctx.restore();
+    }
+
+    // ── SLASH TRAILS ─────────────────────────────────────────────────
+    // Single vivid green-white slash color — matches arcade aesthetic,
+    // clearly readable against both bright fruits and dark background.
+    //
+    // When slashing: full glow trail on each active wrist.
+    // When idle: one dim tracking dot at the faster wrist.
+    const SLASH_COL  = '#AAFF00';
+    const SLASH_RGBA = 'rgba(170,255,0,';
+
+    // Only render the dominant wrist — one trail, one dot, always consistent
+    const wi = this._dominantWi;
+    const trail = this._trails[wi];
+    const slashOn = this._slashActive[wi];
+
+    if (slashOn && trail.length >= 2) {
+      // Pass 1 — wide outer glow
+      for (let i = 1; i < trail.length; i++) {
+        const t = i / trail.length; // 0=tail → 1=tip
+        ctx.save();
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.strokeStyle = `${SLASH_RGBA}${(t * 0.72).toFixed(2)})`;
+        ctx.lineWidth   = t * 44 + 6;
+        ctx.shadowColor = SLASH_COL; ctx.shadowBlur = 36;
+        ctx.beginPath();
+        ctx.moveTo(trail[i-1].x, trail[i-1].y);
+        ctx.lineTo(trail[i].x,   trail[i].y);
+        ctx.stroke();
+        // Inner solid core
+        ctx.strokeStyle = `${SLASH_RGBA}${(t * 0.96).toFixed(2)})`;
+        ctx.lineWidth   = t * 22 + 2;
+        ctx.shadowBlur  = 0;
+        ctx.beginPath();
+        ctx.moveTo(trail[i-1].x, trail[i-1].y);
+        ctx.lineTo(trail[i].x,   trail[i].y);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Pass 2 — white-hot newest segment
+      const n = trail.length - 1;
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(255,255,255,0.96)';
+      ctx.lineWidth   = 9;
+      ctx.shadowColor = '#fff'; ctx.shadowBlur = 22;
+      ctx.beginPath();
+      ctx.moveTo(trail[n-1].x, trail[n-1].y);
+      ctx.lineTo(trail[n].x,   trail[n].y);
+      ctx.stroke();
+      ctx.restore();
+
+      // Bright tip dot
+      const tip = trail[n];
+      ctx.save();
+      ctx.beginPath(); ctx.arc(tip.x, tip.y, 11, 0, Math.PI*2);
+      ctx.fillStyle = '#fff'; ctx.shadowColor = SLASH_COL; ctx.shadowBlur = 26;
+      ctx.fill(); ctx.restore();
+    } else {
+      // Idle tracking dot — single dim marker confirms tracking is active
+      // Fall back to other wrist only if dominant is completely lost
+      const pos = this._wrists[wi] || this._wrists[1 - wi];
+      if (pos) {
+        ctx.save();
+        ctx.beginPath(); ctx.arc(pos.x, pos.y, 8, 0, Math.PI*2);
+        ctx.fillStyle   = `${SLASH_RGBA}0.42)`;
+        ctx.shadowColor = SLASH_COL; ctx.shadowBlur = 12;
+        ctx.fill(); ctx.restore();
+      }
+    }
+
+    // ── FRUITS & BOMBS ────────────────────────────────────────────────
+    this.fruits.forEach(f => f.draw(ctx));
+
+    // ── EFFECTS ───────────────────────────────────────────────────────
+    this.fxSlice.forEach(e => e.draw(ctx));
+    this.fxScore.forEach(e => e.draw(ctx));
+
+    // ── INSTRUCTION BANNER ────────────────────────────────────────────
+    if (this._bannerT > 0) {
+      const alpha = this._bannerT < 1 ? this._bannerT : 1;
+      const msg   = '✂  SLASH FRUITS WITH YOUR ARMS  ✂';
+      ctx.save(); ctx.globalAlpha = alpha;
+      ctx.font = `bold 15px 'Archivo Black',sans-serif`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      const tw = ctx.measureText(msg).width;
+      ctx.fillStyle='rgba(0,0,0,0.65)';
+      ctx.fillRect(W/2-tw/2-14, H*0.87-16, tw+28, 32);
+      ctx.strokeStyle='#000'; ctx.lineWidth=3; ctx.strokeText(msg, W/2, H*0.87);
+      ctx.fillStyle='#FFE600'; ctx.fillText(msg, W/2, H*0.87);
+      ctx.restore();
+    }
+
+    // ── PLAYER NOT DETECTED ───────────────────────────────────────────
+    if (!this._wrists[0] && !this._wrists[1]) {
+      const blink = Math.floor(this._elapsed * 2) % 2 === 0;
+      ctx.save(); ctx.globalAlpha = blink ? 0.9 : 0.35;
+      ctx.font = `bold 16px 'Archivo Black',sans-serif`;
+      ctx.textAlign='center'; ctx.fillStyle='#FFE600';
+      ctx.fillText('⚠ STAND IN VIEW', W/2, H*0.5);
+      ctx.restore();
+    }
+  }
+
+  getScores() { return [this.score]; } // single-element array for framework compat
+  getWinner() { return 0; }            // solo run — player always "completes" it
+  getMVP() {
+    if (this.score === 0)  return { text: 'Nothing sliced! Try again!', emoji: '😅' };
+    if (this.score >= 60)  return { text: 'Fruit massacre!', emoji: '🔥' };
+    if (this.score >= 30)  return { text: 'Slicing machine!', emoji: '⚡' };
+    return { text: 'Keep slicing!', emoji: '🍉' };
+  }
+  destroy() { this.fruits=[]; this.fxSlice=[]; this.fxScore=[]; }
+}
+
+// ─── CATEGORY HUNT ────────────────────────────────────────────────
+//
+// Each emoji belongs to exactly ONE game category — no taxonomy, no
+// overlaps.  Categories follow natural/intuitive grouping:
+//   bird / insect / animal are separate (not nested)
+//   fruit / dessert / drink / food are separate (not nested)
+//
+// Round generation: answer = one emoji with t === tag,
+// distractors = five emojis with t !== tag.  Unambiguous by design.
+
+const CATHUNT_EMOJIS = [
+  // Animal (mammals, reptiles, fish, amphibians — NOT birds or insects)
+  {e:'🐶',t:'animal'},{e:'🐱',t:'animal'},{e:'🐸',t:'animal'},
+  {e:'🐘',t:'animal'},{e:'🦁',t:'animal'},{e:'🦊',t:'animal'},
+  {e:'🐻',t:'animal'},{e:'🐬',t:'animal'},{e:'🐢',t:'animal'},
+  {e:'🐇',t:'animal'},{e:'🐄',t:'animal'},{e:'🐖',t:'animal'},
+  {e:'🦎',t:'animal'},{e:'🐠',t:'animal'},{e:'🦈',t:'animal'},
+  // Insect
+  {e:'🐝',t:'insect'},{e:'🐛',t:'insect'},{e:'🐞',t:'insect'},
+  {e:'🦗',t:'insect'},{e:'🐜',t:'insect'},{e:'🦟',t:'insect'},
+  // Bird
+  {e:'🦜',t:'bird'},{e:'🦚',t:'bird'},{e:'🦢',t:'bird'},
+  {e:'🦆',t:'bird'},{e:'🐧',t:'bird'},{e:'🦤',t:'bird'},
+  {e:'🦉',t:'bird'},{e:'🦩',t:'bird'},
+  // Vehicle
+  {e:'🚗',t:'vehicle'},{e:'✈️',t:'vehicle'},{e:'🚢',t:'vehicle'},
+  {e:'🚂',t:'vehicle'},{e:'🚁',t:'vehicle'},{e:'🏎️',t:'vehicle'},
+  {e:'🛵',t:'vehicle'},{e:'🚌',t:'vehicle'},{e:'🚑',t:'vehicle'},
+  {e:'🚒',t:'vehicle'},{e:'🛶',t:'vehicle'},{e:'🚤',t:'vehicle'},
+  // Food (savoury meals & snacks — NOT fruit, dessert, or drink)
+  {e:'🍕',t:'food'},{e:'🍔',t:'food'},{e:'🌮',t:'food'},
+  {e:'🍜',t:'food'},{e:'🥗',t:'food'},{e:'🥞',t:'food'},
+  {e:'🍿',t:'food'},{e:'🥙',t:'food'},{e:'🍣',t:'food'},
+  // Fruit
+  {e:'🍎',t:'fruit'},{e:'🍊',t:'fruit'},{e:'🍋',t:'fruit'},
+  {e:'🍇',t:'fruit'},{e:'🍓',t:'fruit'},{e:'🍌',t:'fruit'},
+  {e:'🍑',t:'fruit'},{e:'🍒',t:'fruit'},{e:'🫐',t:'fruit'},
+  {e:'🥭',t:'fruit'},
+  // Dessert
+  {e:'🎂',t:'dessert'},{e:'🍰',t:'dessert'},{e:'🧁',t:'dessert'},
+  {e:'🍩',t:'dessert'},{e:'🍪',t:'dessert'},{e:'🍫',t:'dessert'},
+  {e:'🍮',t:'dessert'},{e:'🍭',t:'dessert'},
+  // Drink
+  {e:'🧃',t:'drink'},{e:'☕',t:'drink'},{e:'🧋',t:'drink'},
+  {e:'🍵',t:'drink'},{e:'🥤',t:'drink'},{e:'🍷',t:'drink'},
+  {e:'🍺',t:'drink'},
+  // Musical instrument
+  {e:'🎸',t:'instrument'},{e:'🎺',t:'instrument'},{e:'🎻',t:'instrument'},
+  {e:'🥁',t:'instrument'},{e:'🪗',t:'instrument'},{e:'🎷',t:'instrument'},
+  {e:'🎹',t:'instrument'},{e:'🪘',t:'instrument'},
+  // Sport
+  {e:'⚽',t:'sport'},{e:'🏀',t:'sport'},{e:'🎾',t:'sport'},
+  {e:'🏈',t:'sport'},{e:'⚾',t:'sport'},{e:'🏒',t:'sport'},
+  {e:'🎯',t:'sport'},{e:'🥊',t:'sport'},
+  // Building
+  {e:'🏠',t:'building'},{e:'🏰',t:'building'},{e:'🏛️',t:'building'},
+  {e:'⛪',t:'building'},{e:'🏯',t:'building'},{e:'🕌',t:'building'},
+  {e:'🏪',t:'building'},{e:'🗼',t:'building'},
+  // Tool
+  {e:'🔨',t:'tool'},{e:'🔧',t:'tool'},{e:'🪚',t:'tool'},
+  {e:'🪛',t:'tool'},{e:'⚙️',t:'tool'},{e:'🗜️',t:'tool'},
+  {e:'🔩',t:'tool'},{e:'🪤',t:'tool'},
+  // Weather
+  {e:'🌧️',t:'weather'},{e:'❄️',t:'weather'},{e:'⛅',t:'weather'},
+  {e:'🌪️',t:'weather'},{e:'🌈',t:'weather'},{e:'⚡',t:'weather'},
+  {e:'🌊',t:'weather'},{e:'🌫️',t:'weather'},
+  // Space
+  {e:'🌍',t:'space'},{e:'🌙',t:'space'},{e:'⭐',t:'space'},
+  {e:'🪐',t:'space'},{e:'🌟',t:'space'},{e:'☄️',t:'space'},
+  {e:'🛸',t:'space'},{e:'🔭',t:'space'},
+];
+
+const CATHUNT_CHALLENGES = [
+  // "exclude" = all tags a human would reasonably accept as satisfying the prompt.
+  // Distractors are drawn only from emojis whose tag is NOT in this list.
+  //
+  // FIND THE ANIMAL   → birds and insects are also animals  → exclude all three
+  // FIND THE FOOD     → fruit/dessert/drink are also food   → exclude all four
+  // Everything else   → the category is specific enough that no other tag overlaps
+  { prompt:'FIND THE ANIMAL',             tag:'animal',     exclude:['animal','bird','insect'] },
+  { prompt:'FIND THE BIRD',               tag:'bird',       exclude:['bird'] },
+  { prompt:'FIND THE INSECT',             tag:'insect',     exclude:['insect'] },
+  { prompt:'FIND THE VEHICLE',            tag:'vehicle',    exclude:['vehicle'] },
+  { prompt:'FIND THE FOOD',               tag:'food',       exclude:['food','fruit','dessert','drink'] },
+  { prompt:'FIND THE FRUIT',              tag:'fruit',      exclude:['fruit'] },
+  { prompt:'FIND THE DRINK',              tag:'drink',      exclude:['drink'] },
+  { prompt:'FIND THE DESSERT',            tag:'dessert',    exclude:['dessert'] },
+  { prompt:'FIND THE MUSICAL INSTRUMENT', tag:'instrument', exclude:['instrument'] },
+  { prompt:'FIND THE SPORT',              tag:'sport',      exclude:['sport'] },
+  { prompt:'FIND THE BUILDING',           tag:'building',   exclude:['building'] },
+  { prompt:'FIND THE TOOL',               tag:'tool',       exclude:['tool'] },
+  { prompt:'FIND THE WEATHER',            tag:'weather',    exclude:['weather'] },
+  { prompt:'FIND THE SPACE OBJECT',       tag:'space',      exclude:['space'] },
+];
+
+function cathuntMakeRound(lastChalIdx) {
+  // Pick a challenge different from the last.
+  let ci;
+  do { ci = rndInt(0, CATHUNT_CHALLENGES.length - 1); }
+  while (CATHUNT_CHALLENGES.length > 1 && ci === lastChalIdx);
+
+  const chal = CATHUNT_CHALLENGES[ci];
+
+  // Answer: one emoji whose tag matches the challenge.
+  // Distractors: emojis whose tag is NOT in the challenge's exclude list —
+  // guaranteeing no distractor can reasonably satisfy the prompt.
+  const ansPool = CATHUNT_EMOJIS.filter(x =>  x.t === chal.tag);
+  const disPool = CATHUNT_EMOJIS.filter(x => !chal.exclude.includes(x.t));
+
+  const ans = ansPool[rndInt(0, ansPool.length - 1)].e;
+
+  // Fisher-Yates shuffle distractor pool, take first 5.
+  const d = disPool.slice();
+  for (let i = d.length - 1; i > 0; i--) {
+    const j = rndInt(0, i);
+    [d[i], d[j]] = [d[j], d[i]];
+  }
+  const five = d.slice(0, 5).map(x => x.e);
+
+  const slot  = rndInt(0, 5);
+  const cards = [...five];
+  cards.splice(slot, 0, ans);
+
+  return { prompt: CATHUNT_CHALLENGES[ci].prompt, cards, answer: slot, chalIdx: ci };
+}
+
+// For odd-one-out rounds, the odd emoji must not share the majority tag's
+// "super-group" — otherwise a player could reasonably argue it fits in too.
+//   animal super-group  : animal, bird, insect  (all are "animals")
+//   food   super-group  : food, fruit, dessert, drink  (all are "food")
+const CATHUNT_SUPERGROUP = {
+  animal:  ['animal','bird','insect'],
+  bird:    ['animal','bird','insect'],
+  insect:  ['animal','bird','insect'],
+  food:    ['food','fruit','dessert','drink'],
+  fruit:   ['food','fruit','dessert','drink'],
+  dessert: ['food','fruit','dessert','drink'],
+  drink:   ['food','fruit','dessert','drink'],
+};
+
+// Deterministic round-type cycle (10 slots): 7 category + 3 odd-one-out = 70 / 30.
+// Distributed as C C O C C O C C O C so they spread evenly, never clump.
+const CATHUNT_ROUND_TYPES = [false, false, true, false, false, true, false, false, true, false];
+
+function cathuntMakeOddOneOut(lastChalIdx) {
+  // Pick a majority tag different from last round's.
+  let ci;
+  do { ci = rndInt(0, CATHUNT_CHALLENGES.length - 1); }
+  while (CATHUNT_CHALLENGES.length > 1 && ci === lastChalIdx);
+
+  const majorityTag = CATHUNT_CHALLENGES[ci].tag;
+
+  // Shuffle the majority pool and take 5 distinct emojis.
+  const majority = CATHUNT_EMOJIS.filter(x => x.t === majorityTag).slice();
+  for (let i = majority.length - 1; i > 0; i--) {
+    const j = rndInt(0, i);
+    [majority[i], majority[j]] = [majority[j], majority[i]];
+  }
+  const five = majority.slice(0, 5).map(x => x.e);
+
+  // Odd emoji: must not belong to the majority's super-group,
+  // so no player can argue it also fits the common theme.
+  const superExclude = CATHUNT_SUPERGROUP[majorityTag] || [majorityTag];
+  const oddPool = CATHUNT_EMOJIS.filter(x => !superExclude.includes(x.t));
+  const oddEmoji = oddPool[rndInt(0, oddPool.length - 1)].e;
+
+  const slot  = rndInt(0, 5);
+  const cards = [...five];
+  cards.splice(slot, 0, oddEmoji);
+
+  return {
+    type:    'oddoneout',
+    prompt:  "FIND THE ONE THAT DOESN'T BELONG",
+    cards,
+    answer:  slot,
+    chalIdx: ci,
+  };
+}
+
+class CategoryHunt {
+  constructor() {
+    this._score     = 0;
+    this._round     = null;
+    this._chalIdx   = -1;
+    this._card      = -1;   // 0-5, currently highlighted card
+    this._wrongCard = -1;   // card index during wrong-flash
+    this._state     = 'playing';
+    this._stTimer   = 0;
+    this._pops      = [];
+
+    this._smX       = 0; this._smY = 0;
+    this._noseX     = 0; this._noseY = 0;
+    this._posReady  = false;
+
+    this._raiseTimer = 0;
+    this._wristX     = -1; this._wristY = -1;
+
+    this._elapsed  = 0;
+    this._roundNum = 0;
+  }
+
+  init(canvas) {
+    this.canvas      = canvas;
+    this.ctx         = canvas.getContext('2d');
+    this._score      = 0;
+    this._card       = -1;
+    this._wrongCard  = -1;
+    this._state      = 'playing';
+    this._stTimer    = 0;
+    this._pops       = [];
+    this._posReady   = false;
+    this._smX        = 0; this._smY = 0;
+    this._noseX      = 0; this._noseY = 0;
+    this._raiseTimer = 0;
+    this._wristX     = -1; this._wristY = -1;
+    this._elapsed    = 0;
+    this._roundNum   = 0;
+    this._chalIdx    = -1;
+    this._newRound();
+  }
+
+  _newRound() {
+    const isOdd = CATHUNT_ROUND_TYPES[this._roundNum % CATHUNT_ROUND_TYPES.length];
+    this._round      = isOdd ? cathuntMakeOddOneOut(this._chalIdx) : cathuntMakeRound(this._chalIdx);
+    this._chalIdx    = this._round.chalIdx;
+    this._roundNum++;
+    this._raiseTimer = 0;
+    this._wrongCard  = -1;
+  }
+
+  _kp(kp, W, H) {
+    if (!kp || kp.score < 0.10) return null;
+    const vw = S.pe.vw || 640, vh = S.pe.vh || 480;
+    return { x: W - kp.x * (W / vw), y: kp.y * (H / vh), score: kp.score };
+  }
+
+  _bestPose(poses) {
+    let best = null, bestS = -1;
+    for (const p of poses) {
+      if (!p?.keypoints) continue;
+      const s = p.score ?? 0.5;
+      if (s < 0.25 || s <= bestS) continue;
+      bestS = s; best = p;
+    }
+    return best;
+  }
+
+  // Nose X → column 0-2, nose Y → row 0-1.  Card index = row*3 + col.
+  // Horizontal band: 15%-85% of canvas width.
+  // Vertical band:   20%-70% of canvas height (nose lives in upper frame).
+  _noseToCard(pose, W, H) {
+    const nose = this._kp(pose.keypoints[0], W, H);
+    if (!nose) return -1;
+    this._noseX = nose.x;
+    this._noseY = nose.y;
+    if (!this._posReady) { this._smX = nose.x; this._smY = nose.y; }
+    else {
+      this._smX += (nose.x - this._smX) * 0.12;
+      this._smY += (nose.y - this._smY) * 0.12;
+    }
+    const col = Math.max(0, Math.min(2, Math.floor((this._smX / W - 0.15) / 0.70 * 3)));
+    const row = Math.max(0, Math.min(1, Math.floor((this._smY / H - 0.20) / 0.50 * 2)));
+    return row * 3 + col;
+  }
+
+  // Wrist above its shoulder by ≥20 px, confidence ≥0.35 → true.
+  _handRaised(pose, W, H) {
+    const kps = pose.keypoints;
+    const lw  = this._kp(kps[9],  W, H);
+    const ls  = this._kp(kps[5],  W, H);
+    const rw  = this._kp(kps[10], W, H);
+    const rs  = this._kp(kps[6],  W, H);
+    const leftUp  = lw && lw.score >= 0.35 && ls && lw.y < ls.y - 20;
+    const rightUp = rw && rw.score >= 0.35 && rs && rw.y < rs.y - 20;
+    if (rightUp)     { this._wristX = rw.x; this._wristY = rw.y; }
+    else if (leftUp) { this._wristX = lw.x; this._wristY = lw.y; }
+    return leftUp || rightUp;
+  }
+
+  update(dt, poses) {
+    this._elapsed += dt;
+    const W = this.canvas.width, H = this.canvas.height;
+
+    const pose = this._bestPose(poses);
+    if (pose) {
+      const c = this._noseToCard(pose, W, H);
+      if (c !== -1) { this._card = c; this._posReady = true; }
+    }
+
+    if (this._state !== 'playing') {
+      this._stTimer -= dt;
+      if (this._stTimer <= 0) {
+        if (this._state === 'correct') this._newRound();
+        // Wrong: same round stays active — audience can help
+        this._state      = 'playing';
+        this._wrongCard  = -1;
+        this._raiseTimer = 0;
+      }
+    }
+
+    this._pops = this._pops.filter(p => { p.t += dt; p.y -= 70 * dt; return p.t < 0.9; });
+
+    if (this._state === 'playing' && this._card !== -1 && pose) {
+      if (this._handRaised(pose, W, H)) {
+        this._raiseTimer += dt;
+        if (this._raiseTimer >= 0.25) {
+          this._confirm(this._card);
+          this._raiseTimer = 0;
+        }
+      } else {
+        this._raiseTimer = 0;
+      }
+    } else if (this._state !== 'playing') {
+      this._raiseTimer = 0;
+    }
+  }
+
+  _confirm(cardIdx) {
+    if (cardIdx === this._round.answer) {
+      this._score++;
+      this._state   = 'correct';
+      this._stTimer = 0.8;
+      const lay = this._cardLayout();
+      const pos = this._cardCenter(cardIdx, lay);
+      this._pops.push({ x: pos.cx, y: pos.cy - 30, text: '+1', col: '#AAFF00', t: 0 });
+      Audio.select();
+    } else {
+      this._wrongCard = cardIdx;
+      this._state     = 'wrong';
+      this._stTimer   = 0.55;
+      Audio.bonk();
+    }
+  }
+
+  _cardLayout() {
+    const W = this.canvas.width, H = this.canvas.height;
+
+    // Safe gameplay rectangle: below prompt, above score
+    const safeTop    = H * 0.24;
+    const safeBottom = H * 0.88;
+    const sidePad    = W * 0.04;
+
+    const areaX = sidePad;
+    const areaY = safeTop;
+    const areaW = W - sidePad * 2;
+    const areaH = safeBottom - safeTop;
+
+    const gapX = Math.round(W * 0.015);
+    const gapY = Math.round(H * 0.015);
+
+    // Height-first: derive card height from available rows, then cap by width
+    const maxCardH = (areaH - gapY) / 2;
+    const maxCardW = (areaW - gapX * 2) / 3;
+    const ASPECT   = 1.1; // cardW / cardH
+    const cardH    = Math.min(maxCardH, maxCardW / ASPECT);
+    const cardW    = Math.min(maxCardW, cardH * ASPECT);
+
+    // Center the grid within the safe area
+    const gridW  = cardW * 3 + gapX * 2;
+    const gridH  = cardH * 2 + gapY;
+    const startX = areaX + (areaW - gridW) / 2;
+    const startY = areaY + (areaH - gridH) / 2;
+
+    return { cardW, cardH, gapX, gapY, startX, startY, areaX, areaY, areaW, areaH };
+  }
+
+  _cardCenter(idx, lay) {
+    const col = idx % 3, row = Math.floor(idx / 3);
+    return {
+      cx: lay.startX + col * (lay.cardW + lay.gapX) + lay.cardW / 2,
+      cy: lay.startY + row * (lay.cardH + lay.gapY) + lay.cardH / 2,
+    };
+  }
+
+  render(poses) {
+    const ctx = this.ctx;
+    const W   = this.canvas.width, H = this.canvas.height;
+    if (!this._round) return;
+
+    const { cards, answer, prompt } = this._round;
+    const lay       = this._cardLayout();
+    const isCorrect = this._state === 'correct';
+    const isWrong   = this._state === 'wrong';
+    const pulse     = 0.5 + 0.5 * Math.sin(this._elapsed * 7);
+
+    // ── DEBUG: safe gameplay area ─────────────────────────────────────
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,80,80,0.6)';
+    ctx.lineWidth   = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.strokeRect(lay.areaX, lay.areaY, lay.areaW, lay.areaH);
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // ── PROMPT ────────────────────────────────────────────────────────
+    ctx.save();
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font         = `bold 38px 'Archivo Black',sans-serif`;
+    const maxPromptW = W * 0.92;
+    const measuredW  = ctx.measureText(prompt).width;
+    if (measuredW > maxPromptW) {
+      ctx.font = `bold ${Math.floor(38 * maxPromptW / measuredW)}px 'Archivo Black',sans-serif`;
+    }
+    ctx.fillStyle   = this._round.type === 'oddoneout' ? '#FF2D78' : '#FFE600';
+    ctx.shadowColor = 'rgba(0,0,0,0.85)';
+    ctx.shadowBlur  = 12;
+    ctx.fillText(prompt, W / 2, H * 0.15);
+    ctx.restore();
+
+    // ── CARDS (3 columns × 2 rows) ────────────────────────────────────
+    for (let i = 0; i < 6; i++) {
+      const col = i % 3, row = Math.floor(i / 3);
+      const rx  = lay.startX + col * (lay.cardW + lay.gapX);
+      const ry  = lay.startY + row * (lay.cardH + lay.gapY);
+      const { cx, cy } = this._cardCenter(i, lay);
+
+      const isActive    = this._state === 'playing' && i === this._card;
+      const isWrongPick = isWrong && i === this._wrongCard;
+
+      let bgAlpha = 0.18, borderCol = 'rgba(255,255,255,0.18)', bw = 1.5, glowBlur = 0;
+      if (isActive)    { bgAlpha = 0.22 + pulse * 0.12; borderCol = '#FFE600'; bw = 5; glowBlur = 14 + pulse * 18; }
+      if (isWrongPick) { bgAlpha = 0.40; borderCol = '#FF3B5C'; bw = 5; }
+
+      ctx.save();
+      ctx.fillStyle   = `rgba(0,0,0,${bgAlpha})`;
+      ctx.strokeStyle = borderCol;
+      ctx.lineWidth   = bw;
+      if (glowBlur > 0) { ctx.shadowColor = '#FFE600'; ctx.shadowBlur = glowBlur; }
+      ctx.beginPath();
+      ctx.roundRect(rx, ry, lay.cardW, lay.cardH, 14);
+      ctx.fill(); ctx.stroke();
+      ctx.restore();
+
+      const scale   = isActive ? 1.0 + pulse * 0.06 : 1.0;
+      const emojiSz = Math.round(Math.min(lay.cardW, lay.cardH) * 0.56);
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(scale, scale);
+      ctx.font = `${emojiSz}px sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(cards[i], 0, 0);
+      ctx.restore();
+    }
+
+    // ── HAND-RAISE INDICATOR (top-right) ──────────────────────────────
+    if (this._posReady) {
+      const prog  = Math.min(this._raiseTimer / 0.25, 1);
+      const ix    = W - 55, iy = 46;
+      const ringR = 26;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(ix, iy, ringR, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.13)';
+      ctx.lineWidth   = 4;
+      ctx.stroke();
+
+      if (prog > 0) {
+        ctx.beginPath();
+        ctx.arc(ix, iy, ringR, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * prog);
+        ctx.strokeStyle = '#AAFF00';
+        ctx.lineWidth   = 6;
+        ctx.lineCap     = 'round';
+        ctx.shadowColor = '#AAFF00';
+        ctx.shadowBlur  = 14;
+        ctx.stroke();
+      }
+
+      ctx.font = '22px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.globalAlpha = prog > 0 ? 1.0 : 0.28;
+      ctx.fillText('✋', ix, iy);
+      ctx.restore();
+
+      if (prog > 0 && this._wristX >= 0) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(this._wristX, this._wristY, 10, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(170,255,0,0.35)'; ctx.fill();
+        ctx.strokeStyle = 'rgba(170,255,0,0.80)'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // ── NOSE DEBUG CROSSHAIR ──────────────────────────────────────────
+    if (this._posReady) {
+      const nx = this._noseX, ny = this._noseY;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,0,0.80)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.moveTo(nx - 14, ny); ctx.lineTo(nx + 14, ny); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(nx, ny - 14); ctx.lineTo(nx, ny + 14); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(nx, ny, 5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,0,0.75)'; ctx.fill();
+      ctx.restore();
+    }
+
+    // ── SCORE ─────────────────────────────────────────────────────────
+    ctx.save();
+    ctx.font = `bold 22px 'Archivo Black',sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText(`Score: ${this._score}`, W / 2, H - 24);
+    ctx.restore();
+
+    // ── SCORE POPS ────────────────────────────────────────────────────
+    this._pops.forEach(p => {
+      ctx.save();
+      ctx.globalAlpha = 1 - p.t / 0.9;
+      ctx.font = `bold 40px 'Archivo Black',sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 5;
+      ctx.strokeText(p.text, p.x, p.y);
+      ctx.fillStyle = p.col; ctx.fillText(p.text, p.x, p.y);
+      ctx.restore();
+    });
+
+    // ── STATE FLASH ───────────────────────────────────────────────────
+    if (isCorrect) {
+      ctx.save();
+      ctx.globalAlpha = (this._stTimer / 0.8) * 0.22;
+      ctx.fillStyle = '#AAFF00'; ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
+    if (isWrong) {
+      ctx.save();
+      ctx.globalAlpha = (this._stTimer / 0.55) * 0.22;
+      ctx.fillStyle = '#FF3B5C'; ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
+
+    // ── STEP-IN PROMPT ────────────────────────────────────────────────
+    if (!this._posReady) {
+      const blink = Math.floor(this._elapsed * 2) % 2 === 0;
+      ctx.save();
+      ctx.globalAlpha = blink ? 0.9 : 0.35;
+      ctx.font = `bold 16px 'Archivo Black',sans-serif`;
+      ctx.textAlign = 'center'; ctx.fillStyle = '#FFE600';
+      ctx.fillText('⚠ STEP IN FRONT OF THE CAMERA', W / 2, H * 0.5);
+      ctx.restore();
+    }
+  }
+
+  getScores() { return [this._score]; }
+  getWinner() { return 0; }
+  getMVP() {
+    const n = this._score;
+    if (n === 0)  return { text: 'Nothing found — try again!',  emoji: '👀' };
+    if (n >= 10)  return { text: `${n} hunted — unstoppable!`,  emoji: '🏆' };
+    if (n >= 5)   return { text: `${n} found — great hunting!`, emoji: '🔍' };
+    return               { text: `${n} found — keep hunting!`,  emoji: '🎯' };
+  }
+  destroy() { this._pops = []; }
+}
+
+// ─── GAMES REGISTRY ───────────────────────────────────────────────
+const GAMES = {
+  'lean-dodge': {
+    id: 'lean-dodge', title: 'Lean Dodge', emoji: '🪨',
+    desc: 'Rocks fall from above. Lean left and right to dodge them. Lowest BONK count wins!',
+    readyHint: 'Rocks fall from above.\nLean your whole body left and right to dodge them.\nLowest bonk count wins!',
+    label: s => `${s} BONK${s !== 1 ? 'S' : ''}`,
+    winIs: 'lowest',
+    make: () => new LeanDodge(),
+  },
+  'fruit-frenzy': {
+    id: 'fruit-frenzy', title: 'Fruit Frenzy', emoji: '🍉',
+    desc: 'Slice fruits with your arms! Watch out for bombs. Beat your best score!',
+    readyHint: 'Fruits fly across the screen.\nSwing your arms fast to slice them — the faster the better.\nAvoid the bombs!',
+    label: s => `${s} pts`, winIs: 'highest',
+    playerCount: 1,
+    make: () => new FruitFrenzy(),
+  },
+  'category-hunt': {
+    id: 'category-hunt', title: 'Category Hunt', emoji: '🔍',
+    desc: 'Six emoji cards appear — find the one that matches the category! Move your head to choose, raise a hand to confirm.',
+    readyHint: 'Six emoji cards appear on screen.\nMove your head to highlight the matching one.\nRaise either hand above your shoulder to confirm.',
+    label: s => `${s} found`, winIs: 'highest',
+    playerCount: 1,
+    make: () => new CategoryHunt(),
+  },
+};
+
+// ─── APP STATE ────────────────────────────────────────────────────
+const S = {
+  screen: 'loading',
+  game:   null,
+  gameId: null,
+  loop:   null,
+  poses:  [],
+  pe:     new PoseEngine(),
+};
+
+// ─── DOM HELPERS ──────────────────────────────────────────────────
+const $     = id => document.getElementById(id);
+const flash = () => { const f = $('flash'); f.classList.add('on'); setTimeout(() => f.classList.remove('on'), 80); };
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id)?.classList.add('active');
+  S.screen = id;
+}
+
+function goToMenu() {
+  _stopReadyPreview();
+  if (S.loop)  { S.loop.stop(); S.loop = null; }
+  if (S.game)  { S.game.destroy?.(); S.game = null; }
+  flash();
+  showScreen('lobby');
+}
+
+// ─── LOBBY ────────────────────────────────────────────────────────
+function buildLobby() {
+  const gc = $('gcards');
+  Object.values(GAMES).forEach(g => {
+    const c = document.createElement('div');
+    c.className = 'game-card';
+    const badgeText = (g.playerCount ?? 2) === 1 ? '1P' : 'P1 · P2';
+    c.innerHTML = `
+      <div class="game-card-badge">${badgeText}</div>
+      <span class="game-card-icon">${g.emoji}</span>
+      <div class="game-card-title">${g.title}</div>
+      <div class="game-card-desc">${g.desc}</div>
+      <span class="game-card-star">★</span>`;
+    c.addEventListener('click', () => selectGame(g.id));
+    c.addEventListener('mouseenter', () => Audio.blip());
+    gc.appendChild(c);
+  });
+
+  const bg = $('lbg');
+  const fstarColors = ['#FF2D78','#FFE600','#A8FF00','#00CFFF','#7B2FFF','#FF7F00'];
+  const fstarGlyphs = ['★','✦','✧','◆'];
+  for (let i = 0; i < 16; i++) {
+    const e = document.createElement('div');
+    e.className  = 'fstar';
+    e.textContent = fstarGlyphs[rndInt(0, fstarGlyphs.length - 1)];
+    const col = fstarColors[rndInt(0, fstarColors.length - 1)];
+    e.style.cssText = `left:${rnd(3,97)}%;top:${rnd(3,95)}%;animation-duration:${rnd(4,9)}s;animation-delay:${rnd(0,6)}s;font-size:${rnd(10,22)}px;color:${col}`;
+    bg.appendChild(e);
+  }
+
+  $('cam-btn').addEventListener('click', reqCam);
+}
+
+// ─── BOOT ─────────────────────────────────────────────────────────
+async function boot() {
+  buildLobby();
+  try {
+    await S.pe.load((p, msg) => {
+      $('lbar').style.width = `${p * 100}%`;
+      $('ltxt').textContent  = msg;
+    });
+    await reqCam();
+  } catch (err) {
+    $('ltxt').textContent = 'Error: ' + err.message;
+  }
+}
+
+async function reqCam() {
+  try {
+    await S.pe.startCamera();
+    S.pe.onPoses = poses => { S.poses = poses; };
+    S.pe.start();
+    flash();
+    showScreen('lobby');
+  } catch (_) {
+    showScreen('cam-permission');
+  }
+}
+
+// ─── GAME FLOW ────────────────────────────────────────────────────
+let _readyRaf = null;
+
+function _stopReadyPreview() {
+  if (_readyRaf) { cancelAnimationFrame(_readyRaf); _readyRaf = null; }
+}
+
+function showReadyScreen(id) {
+  const gi = GAMES[id];
+
+  // Populate panel
+  $('ready-emoji').textContent = gi.emoji;
+  $('ready-title').textContent = gi.title.toUpperCase();
+  $('ready-hint').textContent  = gi.readyHint;
+
+  flash();
+  showScreen('ready');
+
+  // Size + start live preview
+  const canvas = $('ready-canvas');
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+
+  _stopReadyPreview();
+  const draw = () => {
+    S.pe.drawMirrored(ctx, canvas);
+    _readyRaf = requestAnimationFrame(draw);
+  };
+  _readyRaf = requestAnimationFrame(draw);
+
+  // START button — use { once:true } so listeners never stack up
+  $('ready-start-btn').addEventListener('click', () => {
+    _stopReadyPreview();
+    startCountdown(id);
+  }, { once: true });
+}
+
+function selectGame(id) {
+  S.gameId = id;
+  Audio.select();
+  showReadyScreen(id);
+}
+
+function startCountdown(id) {
+  const ov   = $('cdown');
+  const ne   = $('cnum');
+  const hint = $('cdown-hint');
+
+  const hints = {
+    'lean-dodge':   'Stand side-by-side · lean left & right to dodge rocks!',
+    'fruit-frenzy': 'Slice fruits with your arms!',
+    'category-hunt': 'Move your head to choose a card · raise a hand to confirm!',
+  };
+  hint.textContent = hints[id] || '';
+
+  // Show game screen behind the countdown overlay and size canvas
+  showScreen('game');
+  ov.classList.add('active');
+  $('hgname').textContent = GAMES[id].title.toUpperCase();
+
+  // Size canvas AFTER the game screen is visible so layout has resolved
+  sizeCanvas(() => {
+    prepGame(id);
+
+    let n = 3;
+    const tick = () => {
+      ne.className    = 'cnum';
+      ne.textContent  = n;
+      ne.style.animation = 'none';
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        ne.style.animation = '';
+        ne.className = 'cnum';
+      }));
+      Audio.countdown(n);
+      n--;
+      if (n > 0) {
+        setTimeout(tick, 900);
+      } else {
+        setTimeout(() => {
+          ne.textContent = 'GO!';
+          ne.className   = 'cnum go';
+          Audio.go();
+          setTimeout(() => {
+            ov.classList.remove('active');
+            runGame();
+          }, 600);
+        }, 900);
+      }
+    };
+    tick();
+  });
+}
+
+// Size the canvas to match its CSS-rendered container.
+// Uses requestAnimationFrame to ensure layout has resolved.
+function sizeCanvas(callback) {
+  const canvas = $('gc');
+  const trySize = () => {
+    const area = canvas.parentElement;
+    const w = area.clientWidth;
+    const h = area.clientHeight;
+    if (w > 10 && h > 10) {
+      canvas.width  = w;
+      canvas.height = h;
+      callback?.();
+    } else {
+      // Layout not resolved yet — retry next frame
+      requestAnimationFrame(trySize);
+    }
+  };
+  requestAnimationFrame(trySize);
+}
+
+function prepGame(id) {
+  const gi = GAMES[id];
+  const players = gi.playerCount ?? 2;
+
+  // Adapt HUD for 1-player vs 2-player games.
+  // Use visibility:hidden (not display:none) for P2 — keeps the flex item's
+  // space so the timer in .hcenter stays centered. display:none collapses P2,
+  // pushing hcenter right where it overlaps the absolutely-positioned menu button.
+  const p2hud    = document.querySelector('.hud-player.p2');
+  const plabels  = document.querySelector('.plabels');
+  if (p2hud)   p2hud.style.visibility = players === 1 ? 'hidden' : '';
+  if (plabels) plabels.style.display   = players === 1 ? 'none'   : '';
+
+  $('hs0').textContent = gi.label(0);
+  if (players >= 2) $('hs1').textContent = gi.label(0);
+  $('htimer').textContent = DEV.duration;
+  $('htimer').className   = 'htimer';
+
+  if (S.game) S.game.destroy?.();
+  const g = gi.make();
+  g.init($('gc'));
+  S.game = g;
+}
+
+let _prevScores = [null, null];
+
+function runGame() {
+  const canvas = $('gc');
+  const ctx    = canvas.getContext('2d');
+  const id     = S.gameId;
+  const gi     = GAMES[id];
+  const g      = S.game;
+  let lastTimerVal = -1;
+  _prevScores = [null, null];
+  console.log(`[runGame] canvas=${canvas.width}×${canvas.height} | video=${S.pe.vw}×${S.pe.vh} | sx=${(canvas.width/(S.pe.vw||640)).toFixed(3)} sy=${(canvas.height/(S.pe.vh||480)).toFixed(3)}`);
+
+  S.loop = new GameLoop({
+    duration: DEV.duration,
+
+    onUpdate(dt) {
+      const poses = S.poses || [];
+      g.update(dt, poses);
+
+      // Sync HUD scores
+      const sc = g.getScores();
+      sc.forEach((score, i) => {
+        const el = $(`hs${i}`);
+        if (!el) return;
+        const label = gi.label(score);
+        if (el.textContent !== label) {
+          el.textContent = label;
+          el.classList.remove('pop');
+          requestAnimationFrame(() => el.classList.add('pop'));
+          setTimeout(() => el.classList.remove('pop'), 200);
+        }
+        _prevScores[i] = score;
+      });
+
+      // Sync timer
+      const tl = S.loop.timeLeft;
+      const te = $('htimer');
+      if (te && tl !== lastTimerVal) {
+        te.textContent = tl;
+        if (tl <= 5)       te.className = 'htimer danger';
+        else if (tl <= 10) te.className = 'htimer warn';
+        else               te.className = 'htimer';
+        if (tl <= 10 && tl !== lastTimerVal) Audio.tick();
+        lastTimerVal = tl;
+      }
+    },
+
+    onRender() {
+      const W = canvas.width, H = canvas.height;
+      // 1. Fill with dark background in case video isn't ready yet
+      ctx.fillStyle = '#111';
+      ctx.fillRect(0, 0, W, H);
+      // 2. Draw webcam (mirrored) as background — covers the fill when ready
+      S.pe.drawMirrored(ctx, canvas);
+      // 3. Draw game elements on top (NO clearRect inside render())
+      g.render(S.poses || []);
+    },
+
+    onTimeUp() {
+      Audio.gameOver();
+      endGame();
+    },
+  });
+
+  S.loop.start();
+}
+
+// ─── END GAME ─────────────────────────────────────────────────────
+function endGame() {
+  if (S.loop) { S.loop.stop(); S.loop = null; }
+
+  const g  = S.game;
+  const gi = GAMES[S.gameId];
+  const sc = g.getScores();
+  const w  = g.getWinner();
+  const mv = g.getMVP();
+
+  setTimeout(() => {
+    flash();
+    showScreen('results');
+    renderResults({ sc, w, mv, gi });
+    spawnConfetti();
+    Audio.winner();
+    g.destroy?.();
+  }, 400);
+}
+
+// ─── RESULTS ──────────────────────────────────────────────────────
+function renderResults({ sc, w, mv, gi }) {
+  const players = gi.playerCount ?? 2;
+  const [s0, s1] = sc;
+
+  let winnerHTML, scoreRowsHTML;
+
+  if (players === 1) {
+    // Solo run — celebrate the score, no winner comparison
+    winnerHTML = `<div class="winner-crown">🏆</div><div class="winner-name">${gi.label(s0)}</div>`;
+    scoreRowsHTML = `
+      <div class="srow">
+        <span class="slabel">Final Score</span>
+        <span class="sval p1">${gi.label(s0)}</span>
+      </div>`;
+  } else {
+    const tie = w === -1;
+    winnerHTML = tie
+      ? `<div class="tie-text">★ IT'S A TIE! ★</div>`
+      : `<div class="winner-crown">👑</div><div class="winner-name">PLAYER ${w + 1}<br>WINS!</div>`;
+    scoreRowsHTML = `
+      <div class="srow">
+        <span class="slabel">Player 1</span>
+        <span class="sval p1">${gi.label(s0)} ${w === 0 ? '🏆' : ''}</span>
+      </div>
+      <div class="srow">
+        <span class="slabel">Player 2</span>
+        <span class="sval p2">${gi.label(s1 ?? 0)} ${w === 1 ? '🏆' : ''}</span>
+      </div>
+      <div class="srow">
+        <span class="slabel" style="font-style:italic;color:var(--txt3)">
+          ${tie ? 'Both players go home with glory!' : w === 0 ? 'Better luck next time, P2!' : 'Better luck next time, P1!'}
+        </span>
+      </div>`;
+  }
+
+  $('results').innerHTML = `
+    <div class="res-title">★ GAME OVER ★</div>
+    ${winnerHTML}
+    <div class="scoreboard">
+      <div class="srow">
+        <span class="slabel">🎮 Game</span>
+        <span style="font-family:var(--font-disp);font-size:14px;color:var(--txt2)">${gi.title}</span>
+      </div>
+      ${scoreRowsHTML}
+    </div>
+    <div class="mvp">
+      <div class="mvp-t">⚡ HIGHLIGHT</div>
+      <div class="mvp-v">${mv.emoji}  ${mv.text}</div>
+    </div>
+    <div class="res-actions">
+      <button class="btn btn-primary" id="btn-again">▶ Play Again</button>
+      <button class="btn btn-secondary" id="btn-lobby">🎮 Change Game</button>
+    </div>`;
+
+  $('btn-again').onclick = () => { Audio.select(); showReadyScreen(S.gameId); };
+  $('btn-lobby').onclick = () => { flash(); Audio.select(); showScreen('lobby'); };
+}
+
+function spawnConfetti() {
+  const colors = ['#FF2D78','#2D6BFF','#AAFF00','#FFE600','#7B2FFF'];
+  for (let i = 0; i < 60; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti';
+    const size = 6 + Math.random() * 8;
+    el.style.cssText =
+      `left:${Math.random()*100}vw;top:-10px;` +
+      `background:${colors[rndInt(0,4)]};` +
+      `animation-duration:${1.5+Math.random()*2}s;` +
+      `animation-delay:${Math.random()*.8}s;` +
+      `transform:rotate(${Math.random()*360}deg);` +
+      `width:${size}px;height:${size}px;` +
+      `border-radius:${Math.random()>.5?'50%':'2px'}`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+}
+
+// ─── START ────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', boot);
+</script>
+</body>
+</html>
