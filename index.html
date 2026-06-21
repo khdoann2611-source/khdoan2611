@@ -353,11 +353,6 @@ function devEndMatch() {
 }
 document.addEventListener('keydown', e => {
   if (e.key === '`') toggleDev();
-  if (e.key === 'd' || e.key === 'D') {
-    DEV.debugOverlay = !DEV.debugOverlay;
-    DEV.trackingViz  = DEV.debugOverlay; // sync tracking viz with debug mode
-    console.log('[CamPlay] Debug overlay:', DEV.debugOverlay ? 'ON' : 'OFF');
-  }
   if (e.key === 'Escape' && S.screen === 'game') goToMenu();
 });
 setInterval(updateDevStatus, 500);
@@ -1376,9 +1371,7 @@ class LeanDodge {
       ctx.restore();
     }
 
-    // ── PERSISTENT TRACKING STATUS BAR ────────────────────────────
-    // Always visible in bottom-left during gameplay — proves tracking is alive
-    this._drawStatusBar(ctx, poses, W, H);
+    if (DEV.debugOverlay) this._drawStatusBar(ctx, poses, W, H);
   }
 
   _drawStatusBar(ctx, poses, W, H) {
